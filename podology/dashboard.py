@@ -29,7 +29,14 @@ from podology.frontend.utils import (
     empty_term_hit_fig,
     format_duration,
 )
-from podology.frontend.renderers.wordticker import get_ticker_dict
+from podology.frontend.wordticker import get_ticker_dict
+from podology.frontend.help_modals import (
+    info_help_modal,
+    episodes_help_modal,
+    within_help_modal,
+    across_help_modal,
+)
+from podology.frontend.info_tab import create_step_flowchart, info_text
 from config import get_connector, ASSETS_DIR, READONLY, BASE_PATH
 
 
@@ -196,6 +203,11 @@ def init_dashboard(flask_app, route):
                 dcc.Store(id="scroll-position-store", data=0),
                 # Add a hidden div to trigger the scroll listener setup:
                 html.Div(id="scroll-listener-trigger", style={"display": "none"}),
+                # Help modals:
+                info_help_modal,
+                episodes_help_modal,
+                within_help_modal,
+                across_help_modal,
                 #
                 # Input (search field) and switches
                 #
@@ -254,7 +266,6 @@ def init_dashboard(flask_app, route):
                         dmc.GridCol(
                             [
                                 theme_toggle,
-                                # language_toggle,
                             ],
                             span=3,
                             style={
@@ -268,7 +279,6 @@ def init_dashboard(flask_app, route):
                             },
                         ),
                     ],
-                    # className="mt-3",
                 ),
                 #
                 # Search Tags
@@ -304,218 +314,295 @@ def init_dashboard(flask_app, route):
                     [
                         dmc.TabsList(
                             [
-                                dmc.TabsTab("Metadata", value="metadata"),
+                                dmc.TabsTab("Info", value="info"),
+                                dmc.TabsTab("Episode List", value="metadata"),
                                 dmc.TabsTab("Within Episode", value="within"),
                                 dmc.TabsTab("Across Episodes", value="across"),
                             ],
                             style={"marginTop": 20},
                         ),
                         dmc.TabsPanel(
-                            #  __________
-                            # | Metadata |
+                            #  _______
+                            # | Infos |
                             #  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
                             dmc.Grid(
-                                [
-                                    dmc.GridCol(
-                                        [
-                                            dmc.Title("Episodes", order=2),
-                                            dag.AgGrid(
-                                                id="transcribe-episode-list",
-                                                columnDefs=column_defs,
-                                                columnSize="sizeToFit",
-                                                defaultColDef={
-                                                    "resizable": True,
-                                                    "sortable": True,
-                                                    "filter": True,
-                                                },
-                                                rowModelType="clientSide",
-                                                style={
-                                                    "height": "calc(100vh - 300px)",
-                                                    "width": "100%",
-                                                },
-                                                rowData=get_row_data(episode_store),
-                                                className="ag-theme-quartz",
-                                                getRowId="params.data.eid",
-                                                dashGridOptions={
-                                                    "rowSelection": "single",
-                                                    "tooltipShowDelay": 500,
-                                                    "tooltipHideDelay": 10000,
-                                                    "tooltipInteraction": True,
-                                                    "popupParent": {
-                                                        "function": "setPopupsParent()"
-                                                    },
-                                                },
+                                dmc.GridCol(
+                                    [
+                                        dmc.ActionIcon(
+                                            DashIconify(
+                                                icon="mdi:help-circle-outline", width=24
                                             ),
-                                        ],
-                                        span=12,
-                                        style={"margin-top": "20px"},
-                                    ),
-                                ],
+                                            id="help-infos",
+                                            variant="subtle",
+                                            size="lg",
+                                        ),
+                                        info_text,
+                                        create_step_flowchart(),
+                                    ],
+                                    span=8,
+                                    offset=2,
+                                    style={"margin-top": "20px"},
+                                )
                             ),
+                            value="info",
+                        ),
+                        dmc.TabsPanel(
+                            [
+                                #      ______________
+                                #     | Episode List |
+                                #  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+                                dmc.Grid(
+                                    [
+                                        dmc.GridCol(
+                                            [
+                                                dmc.Title("Episodes", order=2),
+                                            ],
+                                            span=2,
+                                        ),
+                                        dmc.GridCol(
+                                            [
+                                                dmc.ActionIcon(
+                                                    DashIconify(
+                                                        icon="mdi:help-circle-outline",
+                                                        width=24,
+                                                    ),
+                                                    id="help-episodes",
+                                                    variant="subtle",
+                                                    size="lg",
+                                                ),
+                                            ],
+                                            span=10,
+                                        ),
+                                    ],
+                                ),
+                                dmc.Grid(
+                                    [
+                                        dmc.GridCol(
+                                            [
+                                                dag.AgGrid(
+                                                    id="transcribe-episode-list",
+                                                    columnDefs=column_defs,
+                                                    columnSize="responsiveSizeToFit",
+                                                    defaultColDef={
+                                                        "resizable": True,
+                                                        "sortable": True,
+                                                        "filter": True,
+                                                    },
+                                                    rowModelType="clientSide",
+                                                    style={
+                                                        "height": "calc(100vh - 300px)",
+                                                        "width": "100%",
+                                                    },
+                                                    rowData=get_row_data(episode_store),
+                                                    className="ag-theme-quartz",
+                                                    getRowId="params.data.eid",
+                                                    dashGridOptions={
+                                                        "rowSelection": "single",
+                                                        "tooltipShowDelay": 500,
+                                                        "tooltipHideDelay": 10000,
+                                                        "tooltipInteraction": True,
+                                                        "popupParent": {
+                                                            "function": "setPopupsParent()"
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                            span=12,
+                                            style={"margin-top": "20px"},
+                                        ),
+                                    ],
+                                ),
+                            ],
                             value="metadata",
                         ),
                         dmc.TabsPanel(
-                            #
-                            #     ________________
-                            #    | Within Episode |
-                            #  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-                            dmc.Grid(
-                                children=[
-                                    #
-                                    # Animated word cloud (Ticker)
-                                    # ----------------------------
-                                    dmc.GridCol(
-                                        children=[
-                                            dcc.Graph(
-                                                id="scroll-animation",
-                                                figure=empty_scroll_fig,
-                                                config={
-                                                    "displayModeBar": False,
-                                                    "staticPlot": True,
-                                                },
-                                            ),
-                                            dcc.Store(
-                                                id="ticker-dict",
-                                                data="",
-                                            ),
-                                        ],
-                                        span={"md": 5, "xs": 12},
-                                    ),
-                                    #
-                                    # Transcript of selected episode
-                                    # ------------------------------
-                                    dmc.GridCol(
-                                        children=[
-                                            dmc.Paper(
-                                                children=[
-                                                    dmc.Grid(
-                                                        [
-                                                            dmc.GridCol(
-                                                                [
-                                                                    dcc.Store(
-                                                                        id="playback-time-store",
-                                                                        data=0,
-                                                                    ),
-                                                                    html.Audio(
-                                                                        id="audio-player",
-                                                                        controls=True,
-                                                                        src="",
-                                                                    ),
-                                                                ],
-                                                                span=9,
-                                                            ),
-                                                            dmc.GridCol(
-                                                                [
-                                                                    dcc.Store(
-                                                                        id="episode-duration",
-                                                                        data="",
-                                                                    ),
-                                                                    dmc.Text(
-                                                                        "",
-                                                                        id="transcript-episode-date",
-                                                                        c="dimmed",
-                                                                    ),
-                                                                ],
-                                                                span=3,
-                                                            ),
-                                                        ]
+                            [
+                                #
+                                #     ________________
+                                #    | Within Episode |
+                                #  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+                                dmc.Grid(
+                                    [
+                                        # Help button
+                                        dmc.GridCol(
+                                            [
+                                                dmc.ActionIcon(
+                                                    DashIconify(
+                                                        icon="mdi:help-circle-outline",
+                                                        width=24,
                                                     ),
-                                                    dmc.Grid(
-                                                        [
-                                                            dmc.Title(
-                                                                "Title",
-                                                                order=3,
-                                                                id="transcript-episode-title",
-                                                            ),
-                                                            dmc.GridCol(
-                                                                span=12,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                    #
-                                                    # Transcript and search hit / relevance displays
-                                                    #
-                                                    dmc.Grid(
-                                                        [
-                                                            dmc.GridCol(
-                                                                dmc.Paper(
-                                                                    id="transcript",
-                                                                    className="transcript",
+                                                    id="help-within",
+                                                    variant="subtle",
+                                                    size="lg",
+                                                ),
+                                            ],
+                                            span=5,
+                                            style={
+                                                "display": "flex",
+                                                "justifyContent": "flex-end",
+                                                "alignItems": "center",
+                                            },
+                                        ),
+                                        # Audio
+                                        dmc.GridCol(
+                                            [
+                                                dcc.Store(
+                                                    id="playback-time-store",
+                                                    data=0,
+                                                ),
+                                                html.Audio(
+                                                    id="audio-player",
+                                                    controls=True,
+                                                    src="",
+                                                ),
+                                            ],
+                                            span=4,
+                                        ),
+                                        # Episode date
+                                        dmc.GridCol(
+                                            [
+                                                dcc.Store(
+                                                    id="episode-duration",
+                                                    data="",
+                                                ),
+                                                dmc.Text(
+                                                    "",
+                                                    id="transcript-episode-date",
+                                                    c="dimmed",
+                                                ),
+                                            ],
+                                            span=2,
+                                            style={"align-items": "center"},
+                                        ),
+                                    ],
+                                    style={"margin-top": "20px"},
+                                ),
+                                dmc.Grid(
+                                    children=[
+                                        #
+                                        # Animated word cloud (Ticker)
+                                        # ----------------------------
+                                        dmc.GridCol(
+                                            children=[
+                                                dcc.Graph(
+                                                    id="scroll-animation",
+                                                    figure=empty_scroll_fig,
+                                                    config={
+                                                        "displayModeBar": False,
+                                                        "staticPlot": True,
+                                                    },
+                                                ),
+                                                dcc.Store(
+                                                    id="ticker-dict",
+                                                    data="",
+                                                ),
+                                            ],
+                                            span={"md": 5, "xs": 12},
+                                        ),
+                                        #
+                                        # Transcript of selected episode
+                                        # ------------------------------
+                                        dmc.GridCol(
+                                            children=[
+                                                dmc.Paper(
+                                                    children=[
+                                                        dmc.Grid(
+                                                            [
+                                                                dmc.Title(
+                                                                    "Title",
+                                                                    order=3,
+                                                                    id="transcript-episode-title",
+                                                                ),
+                                                                dmc.GridCol(
+                                                                    span=12,
+                                                                ),
+                                                            ],
+                                                        ),
+                                                        #
+                                                        # Transcript and search hit / relevance displays
+                                                        #
+                                                        dmc.Grid(
+                                                            [
+                                                                dmc.GridCol(
+                                                                    dmc.Paper(
+                                                                        id="transcript",
+                                                                        className="transcript",
+                                                                        style={
+                                                                            "height": "calc(100vh - 350px)",
+                                                                            "overflow-y": "auto",
+                                                                            "overflow-x": "hidden",
+                                                                            "word-wrap": "break-word",
+                                                                            "padding": "15px",
+                                                                        },
+                                                                    ),
+                                                                    span=11,
                                                                     style={
+                                                                        "padding-right": "0",
                                                                         "height": "calc(100vh - 350px)",
-                                                                        "overflow-y": "auto",
-                                                                        "overflow-x": "hidden",
-                                                                        "word-wrap": "break-word",
-                                                                        "padding": "15px",
                                                                     },
                                                                 ),
-                                                                span=11,
-                                                                style={
-                                                                    "padding-right": "0",
-                                                                    "height": "calc(100vh - 350px)",
-                                                                },
-                                                            ),
-                                                            dmc.GridCol(
-                                                                html.Div(
-                                                                    [
-                                                                        # Term occurrences:
-                                                                        dcc.Graph(
-                                                                            id="search-hit-column",
-                                                                            config={
-                                                                                "displayModeBar": False,
-                                                                                "staticPlot": True,
-                                                                            },
-                                                                            figure=empty_term_hit_fig,
-                                                                            style={
-                                                                                "height": "calc(100vh - 350px)",
-                                                                                "width": "100%",
-                                                                            },
-                                                                        ),
-                                                                        html.Div(
-                                                                            id="visible-area-overlay",
-                                                                            style={
-                                                                                "position": "absolute",
-                                                                                "top": "0%",
-                                                                                "left": "0",
-                                                                                "right": "0",
-                                                                                "height": "0",
-                                                                                "background": "rgba(120, 120, 120, 0.2)",
-                                                                                "border-left": "3px solid rgba(120, 120, 120, 1.0)",
-                                                                                "pointer-events": "none",  # Don't block graph interactions
-                                                                                "display": "none",  # Initially hidden
-                                                                                "z-index": "10",
-                                                                            },
-                                                                        ),
-                                                                    ],
+                                                                dmc.GridCol(
+                                                                    html.Div(
+                                                                        [
+                                                                            # Term occurrences:
+                                                                            dcc.Graph(
+                                                                                id="search-hit-column",
+                                                                                config={
+                                                                                    "displayModeBar": False,
+                                                                                    "staticPlot": True,
+                                                                                },
+                                                                                figure=empty_term_hit_fig,
+                                                                                style={
+                                                                                    "height": "calc(100vh - 350px)",
+                                                                                    "width": "100%",
+                                                                                },
+                                                                            ),
+                                                                            html.Div(
+                                                                                id="visible-area-overlay",
+                                                                                style={
+                                                                                    "position": "absolute",
+                                                                                    "top": "0%",
+                                                                                    "left": "0",
+                                                                                    "right": "0",
+                                                                                    "height": "0",
+                                                                                    "background": "rgba(120, 120, 120, 0.2)",
+                                                                                    "border-left": "3px solid rgba(120, 120, 120, 1.0)",
+                                                                                    "pointer-events": "none",  # Don't block graph interactions
+                                                                                    "display": "none",  # Initially hidden
+                                                                                    "z-index": "10",
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        style={
+                                                                            "position": "relative",
+                                                                            "height": "calc(100vh - 350px)",
+                                                                            "width": "100%",
+                                                                            "overflow": "hidden",
+                                                                        },
+                                                                    ),
+                                                                    span=1,
+                                                                    className="col-search-hits",
                                                                     style={
-                                                                        "position": "relative",
+                                                                        "padding-left": "0",
                                                                         "height": "calc(100vh - 350px)",
-                                                                        "width": "100%",
-                                                                        "overflow": "hidden",
                                                                     },
                                                                 ),
-                                                                span=1,
-                                                                className="col-search-hits",
-                                                                style={
-                                                                    "padding-left": "0",
-                                                                    "height": "calc(100vh - 350px)",
-                                                                },
-                                                            ),
-                                                        ],
-                                                        className="align-items-stretch",
-                                                        style={
-                                                            "height": "calc(100vh - 350px)",
-                                                            "min-height": "450px",
-                                                        },
-                                                    ),
-                                                ],
-                                            ),
-                                        ],
-                                        span=dict(xs=12, md=7),
-                                    ),
-                                ],
-                                style={"margin-top": "20px"},
-                            ),
+                                                            ],
+                                                            className="align-items-stretch",
+                                                            style={
+                                                                "height": "calc(100vh - 350px)",
+                                                                "min-height": "450px",
+                                                            },
+                                                        ),
+                                                    ],
+                                                ),
+                                            ],
+                                            span=dict(xs=12, md=7),
+                                        ),
+                                    ],
+                                    style={"margin-top": "20px"},
+                                ),
+                            ],
                             value="within",
                         ),
                         dmc.TabsPanel(
@@ -531,13 +618,26 @@ def init_dashboard(flask_app, route):
                                     # ----------------------------
                                     dmc.Grid(
                                         [
+                                            dmc.ActionIcon(
+                                                DashIconify(
+                                                    icon="mdi:help-circle-outline",
+                                                    width=24,
+                                                ),
+                                                id="help-across",
+                                                variant="subtle",
+                                                size="lg",
+                                            ),
+                                        ]
+                                    ),
+                                    dmc.Grid(
+                                        [
                                             dmc.GridCol(
                                                 dcc.Graph(
                                                     id="word-count-plot",
                                                     figure=empty_term_fig,
                                                     config={
                                                         "displayModeBar": False,
-                                                    }
+                                                    },
                                                 ),
                                                 span=12,
                                             )
@@ -585,7 +685,7 @@ def init_dashboard(flask_app, route):
                     color="#4488ff",
                     orientation="horizontal",
                     variant="default",
-                    value="metadata",
+                    value="info",
                     style={"height": "calc(100vh - 250px)"},
                 ),
                 dcc.Interval(id="pageload-trigger", interval=100, max_intervals=1),
@@ -685,6 +785,40 @@ def init_callbacks(app):
         State("episode-duration", "data"),
         prevent_initial_call=True,
     )
+
+    @app.callback(
+        Output("info-help-modal", "opened"),
+        Output("episodes-help-modal", "opened"),
+        Output("within-help-modal", "opened"),
+        Output("across-help-modal", "opened"),
+        Input("help-infos", "n_clicks"),
+        Input("help-episodes", "n_clicks"),
+        Input("help-within", "n_clicks"),
+        Input("help-across", "n_clicks"),
+        State("info-help-modal", "opened"),
+        State("episodes-help-modal", "opened"),
+        State("within-help-modal", "opened"),
+        State("across-help-modal", "opened"),
+        prevent_initial_call=True,
+    )
+    def toggle_help_modal(
+        n_infos, n_episodes, n_within, n_across, infos_open, episodes_open, within_open, across_open
+    ):
+        """
+        Toggle the appropriate help modal based on which button was clicked.
+        """
+        trigger_id = ctx.triggered_id
+
+        if trigger_id == "help-infos":
+            return not infos_open, False, False, False
+        elif trigger_id == "help-episodes":
+            return False, not episodes_open, False, False
+        elif trigger_id == "help-within":
+            return False, False, not within_open, False
+        elif trigger_id == "help-across":
+            return False, False, False, not across_open
+
+        return False, False, False, False
 
     @app.callback(
         Output("transcribe-episode-list", "rowData"),
@@ -1108,7 +1242,9 @@ def init_callbacks(app):
 
         template = "plotly_dark" if color_scheme_checked else "plotly"
 
-        return plot_word_freq(terms_store["entries"], es_client=app.es_client, template=template)
+        return plot_word_freq(
+            terms_store["entries"], es_client=app.es_client, template=template
+        )
 
     @app.callback(
         Output("search-hit-column", "figure"),
