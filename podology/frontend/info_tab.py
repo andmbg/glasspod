@@ -117,7 +117,7 @@ def create_step_flowchart(image_folder="assets/images"):
                 # Left column: Image
                 dmc.GridCol(
                     html.Img(
-                        src=f"/{image_folder}/{step['image']}",
+                        src=f"{image_folder}/{step['image']}",
                         style={
                             "maxWidth": "100%",
                             "display": "block",

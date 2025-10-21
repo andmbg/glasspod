@@ -337,7 +337,7 @@ def init_dashboard(flask_app, route):
                                             size="lg",
                                         ),
                                         info_text,
-                                        create_step_flowchart(),
+                                        create_step_flowchart(image_folder=app.get_asset_url("images/")),
                                     ],
                                     span=8,
                                     offset=2,
