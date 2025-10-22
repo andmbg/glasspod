@@ -33,8 +33,10 @@ episodes_help_modal = dmc.Modal(
             """
 ### The Episodes Tab
 
-In a productive instance, this tab only displays all episodes, a bit of extra information (show
-notes, a word cloud) and whether they have been processed already. In a local instance, it also
+This tab can be a starting point to explore. Where data are present, inspect titles, look at
+show notes and word clouds. Click on titles to open that episode in the Within Episode tab.
+
+In a productive instance, this tab works as a directory. In a local instance, it also
 allows to trigger processing of yet unprocessed episodes by clicking on the Status column of a
 given episode.
             """,
