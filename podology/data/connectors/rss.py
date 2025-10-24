@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
+from email.utils import parsedate_to_datetime
 
 import requests
 from loguru import logger
@@ -93,6 +94,32 @@ class RSSConnector(Connector):
 
         return out
 
+    def _parse_pub_date(self, date_str: str) -> datetime:
+
+        """
+        Parse publication date from RSS feed.
+        Handles multiple date formats including GMT timezone.
+        """
+        try:
+            # Use email.utils which handles RFC 2822 dates (standard for RSS)
+            # This handles 'Tue, 18 Oct 2022 16:09:47 GMT' correctly
+            return parsedate_to_datetime(date_str)
+        except (TypeError, ValueError):
+            # Fallback for other formats
+            formats = [
+                '%a, %d %b %Y %H:%M:%S %z',
+                '%a, %d %b %Y %H:%M:%S GMT',
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%dT%H:%M:%SZ',
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+            
+            raise ValueError(f"Cannot parse date: {date_str}")
+
     def _parse_rss(self, rss_content: str) -> list[Episode]:
         """Turn RSS data into an Episode object.
 
@@ -116,12 +143,9 @@ class RSSConnector(Connector):
 
             pub_date = item.find("pubDate")
             if pub_date is None or pub_date.text is None:
-                logger.error("No publication date found in item.")
-                pub_date = ""
+                raise ValueError("No publication date found in item.")
             else:
-                pub_date = datetime.strptime(
-                    pub_date.text, "%a, %d %b %Y %H:%M:%S %z"
-                ).strftime("%Y-%m-%d")
+                pub_date = self._parse_pub_date(pub_date.text).strftime("%Y-%m-%d")
 
             description = item.find("description")
             if description is None or description.text is None:

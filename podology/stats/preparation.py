@@ -21,7 +21,14 @@ from loguru import logger
 from redis import Redis
 import requests
 
-from config import CHUNKS_DIR, DB_PATH, WORDCLOUD_DIR, TRANSCRIPT_DIR, EMBEDDER_ARGS
+from config import (
+    CHUNKS_DIR,
+    DB_PATH,
+    WORDCLOUD_DIR,
+    TRANSCRIPT_DIR,
+    EMBEDDER_ARGS,
+    ASSETS_DIR,
+)
 from podology.data.Episode import Episode, Status
 from podology.data.Transcript import Transcript
 from podology.stats.nlp import (
@@ -29,7 +36,11 @@ from podology.stats.nlp import (
     get_wordcloud,
     timed_named_entity_tokens,
 )
-from podology.search.elasticsearch import index_segments, index_chunks, setup_elasticsearch_indices
+from podology.search.elasticsearch import (
+    index_segments,
+    index_chunks,
+    setup_elasticsearch_indices,
+)
 
 
 def post_process_pipeline(
@@ -57,6 +68,7 @@ def post_process_pipeline(
     store_timed_named_entities(episodes)
     store_named_entity_types(episodes)
     store_type_proximity(episodes)  # depends on store_timed_named_entities()
+    sync_wordcloud_assets()
 
     for episode in episodes:
         episode_store.add_or_update(episode)
@@ -391,9 +403,11 @@ def store_chunk_embeddings(episodes: List[Episode]):
 
         try:
             transcript = Transcript(episode)
-            chunks = transcript.chunks(
-                attrs=["start", "end", "eid", "title", "pub_date"]
-            ).reset_index().to_dict("records")
+            chunks = (
+                transcript.chunks(attrs=["start", "end", "eid", "title", "pub_date"])
+                .reset_index()
+                .to_dict("records")
+            )
 
             headers = {
                 "Authorization": f"Bearer {os.getenv('API_TOKEN')}",
@@ -434,3 +448,38 @@ def store_chunk_embeddings(episodes: List[Episode]):
             import gc
 
             gc.collect()
+
+
+def sync_wordcloud_assets():
+    """
+    Sync wordcloud PNG files from WORDCLOUD_DIR to ASSETS_DIR.
+    Only copies files that are missing or outdated in the destination.
+    Fast when no updates needed (uses file modification times).
+    Uses only pathlib.
+    """
+    source_dir = Path(WORDCLOUD_DIR)
+    dest_dir = Path(ASSETS_DIR) / "wordclouds"
+
+    # Create destination if it doesn't exist
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    if not source_dir.exists():
+        logger.warning(f"Wordcloud source directory not found: {source_dir}")
+        return
+
+    copied_count = 0
+    for source_file in source_dir.glob("*.png"):
+        dest_file = dest_dir / source_file.name
+
+        # Only copy if destination doesn't exist or source is newer
+        if (
+            not dest_file.exists()
+            or source_file.stat().st_mtime > dest_file.stat().st_mtime
+        ):
+            dest_file.write_bytes(source_file.read_bytes())
+            copied_count += 1
+
+    if copied_count > 0:
+        logger.info(f"Synced {copied_count} wordcloud files to assets")
+    else:
+        logger.debug("Wordcloud assets already up to date")

@@ -337,7 +337,9 @@ def init_dashboard(flask_app, route):
                                             size="lg",
                                         ),
                                         info_text,
-                                        create_step_flowchart(image_folder=app.get_asset_url("images/")),
+                                        create_step_flowchart(
+                                            image_folder=app.get_asset_url("images/")
+                                        ),
                                     ],
                                     span=8,
                                     offset=2,
@@ -802,7 +804,14 @@ def init_callbacks(app):
         prevent_initial_call=True,
     )
     def toggle_help_modal(
-        n_infos, n_episodes, n_within, n_across, infos_open, episodes_open, within_open, across_open
+        n_infos,
+        n_episodes,
+        n_within,
+        n_across,
+        infos_open,
+        episodes_open,
+        within_open,
+        across_open,
     ):
         """
         Toggle the appropriate help modal based on which button was clicked.

@@ -186,7 +186,7 @@ def index_chunks_episode(episode: Episode) -> None:
         return
 
     # Index chunks
-    chunks = json.load(open(CHUNKS_DIR / f"{episode.eid}_chunks.json", "r"))
+    chunks = json.load(open(CHUNKS_DIR / f"{episode.eid}_chunks.json", "r")).get("chunks", [])
     logger.debug(f"{episode.eid}: Indexing chunks in Elasticsearch")
     actions = [
         {

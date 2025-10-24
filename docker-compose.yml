@@ -36,16 +36,34 @@ services:
       - ELASTICSEARCH_PORT=9200
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - PORT=8080
-      - EMBEDDER_MODEL=multi-qa-mpnet-base-dot-v1
-      - EMBEDDER_DIMS=768
+      - TRANSCRIBER_URL_PORT=${TRANSCRIBER_URL_PORT}
+      - API_TOKEN=${API_TOKEN}
+      - HF_TOKEN=${HF_TOKEN}
     ports:
       - 8080:8080
     volumes:
       - ./data:/app/data
-      - "./data/Knowledge Fight/wordclouds:/app/podology/assets/wordclouds"
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/andmbg/podology:latest
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TRANSCRIBER_URL_PORT=${TRANSCRIBER_URL_PORT}
+      - API_TOKEN=${API_TOKEN}
+      - HF_TOKEN=${HF_TOKEN}
+    volumes:
+      - ./data:/app/data
+    command: poetry run rq worker transcription
     restart: unless-stopped
 
 volumes:
   elasticsearch-data:
-
