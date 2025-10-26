@@ -19,6 +19,7 @@ SOURCE = "https://anchor.fm/s/4d70d828/podcast/rss"  # your RSS feed
 
 # PROJECT_NAME = "Knowledge Fight"
 # SOURCE = "http://feeds.libsyn.com/92106/rss"
+
 # If READONLY is True, no new jobs can be started from the dashboard and the
 # 1 Hz polling for download/transcription status is turned off:
 READONLY = True

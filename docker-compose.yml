@@ -26,6 +26,8 @@ services:
 
   app:
     image: ghcr.io/andmbg/podology:latest
+    env_file:
+      - .env
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -38,15 +40,20 @@ services:
       - REDIS_PORT=6379
       - TRANSCRIBER_URL_PORT=${TRANSCRIBER_URL_PORT}
       - API_TOKEN=${API_TOKEN}
-      - HF_TOKEN=${HF_TOKEN}
+      - EMBEDDER_MODEL=all-mpnet-base-v2
+      - EMBEDDER_DIMS=768
     ports:
       - 8080:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/app/data
     restart: unless-stopped
 
   worker:
     image: ghcr.io/andmbg/podology:latest
+    env_file:
+      - .env
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -59,7 +66,10 @@ services:
       - REDIS_PORT=6379
       - TRANSCRIBER_URL_PORT=${TRANSCRIBER_URL_PORT}
       - API_TOKEN=${API_TOKEN}
-      - HF_TOKEN=${HF_TOKEN}
+      - EMBEDDER_MODEL=all-mpnet-base-v2
+      - EMBEDDER_DIMS=768
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/app/data
     command: poetry run rq worker transcription
