@@ -83,7 +83,9 @@ def plot_word_freq(
 
         fig.update_yaxes(
             gridcolor=(
-                "rgba(255,255,255, .2)" if template == "plotly_dark" else "rgba(0,0,0, .3)"
+                "rgba(255,255,255, .2)"
+                if template == "plotly_dark"
+                else "rgba(0,0,0, .3)"
             ),
             gridwidth=1,
             griddash="2, 5, 2, 5",
@@ -225,7 +227,7 @@ def plot_transcript_hits_es(
             allbins_df[term] = term_counts
 
         elif term_or_semantic == "semantic":
-            relevances = _chunk_similarities(es_client, episode, term, term_or_semantic)
+            relevances = get_chunk_similarities(es_client, episode, term)
             allbins_df[term] = relevances["similarity"].values
 
     allbins_df.set_index("bin", inplace=True)
@@ -289,7 +291,7 @@ def _create_term_hits_plot(
                         width=1,
                         color=(colordict[colid] if term else "grey"),
                     ),
-                    opacity=.8,
+                    opacity=0.8,
                     xaxis="x2",
                 ),
             )
@@ -320,7 +322,10 @@ def _create_term_hits_plot(
             showgrid=False,
             showticklabels=False,
             zeroline=False,
-            range=[min_similarity, max_similarity * 1.01 if max_similarity > 0 else 1.0],
+            range=[
+                min_similarity,
+                max_similarity * 1.01 if max_similarity > 0 else 1.0,
+            ],
             overlaying="x",  # Overlay on the primary x-axis
             domain=[0, 1],
         ),
@@ -354,7 +359,7 @@ def _search_term_positions(
             }
         },
         "_source": ["start", "text"],
-        "size": 1000,  # Adjust as needed
+        "size": 1000,
     }
     transcript = _get_transcript_with_elastic_ids(eid)
 
@@ -388,8 +393,10 @@ def _search_term_positions(
         return []
 
 
-def _chunk_similarities(
-    es_client: Elasticsearch, episode: Episode, term: str, term_or_prompt: str
+def get_chunk_similarities(
+    es_client: Elasticsearch,
+    episode: Episode,
+    term: str,
 ) -> pd.DataFrame:
     """
     Get relevance scores for a term or prompt using Elasticsearch.
@@ -399,12 +406,12 @@ def _chunk_similarities(
         "knn": {
             "field": "embedding",
             "query_vector": _get_embedding(term),
-            "k": 1000,
+            "k": 128,
             "num_candidates": 1000,
             "filter": {"term": {"eid": episode.eid}},
         },
         # "_source": ["eid", "text", "start", "end", "title"]
-        "size": 1000,  # Adjust as needed
+        "size": 1000,
     }
 
     response = es_client.search(index=CHUNK_INDEX_NAME, body=vector_query)
@@ -426,15 +433,16 @@ def _chunk_similarities(
 
 
 def _get_embedding(term: str) -> List[float]:
-    """
-    Get the embedding vector for a search term using a pre-trained model.
-    """
+    """Return an L2-normalized query vector (matches indexed vectors)."""
     try:
-        embedding = model.encode(term).tolist()
-        return embedding
-    except Exception as e:
-        logger.error(f"Error getting embedding for '{term}': {e}")
-        return [0.0] * EMBEDDER_ARGS["dims"]
+        vec = model.encode(term, normalize_embeddings=True)
+    except TypeError:
+        vec = model.encode(term)
+        a = np.asarray(vec, dtype=float)
+        n = np.linalg.norm(a) + 1e-12
+        vec = (a / n)
+    # ensure list
+    return list(vec)
 
 
 def _get_transcript_with_elastic_ids(eid: str) -> pd.DataFrame:
