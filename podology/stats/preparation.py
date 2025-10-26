@@ -8,13 +8,9 @@ by the functions that they apply to the whole corpus.
 import os
 import json
 from pathlib import Path
-from typing import Generator, List, Optional
 import multiprocessing
 import sqlite3
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from podology.data.EpisodeStore import EpisodeStore
+from typing import List, Optional, TYPE_CHECKING
 
 import pandas as pd
 from loguru import logger
@@ -41,6 +37,9 @@ from podology.search.elasticsearch import (
     index_chunks,
     setup_elasticsearch_indices,
 )
+
+if TYPE_CHECKING:
+    from podology.data.EpisodeStore import EpisodeStore
 
 
 def post_process_pipeline(
