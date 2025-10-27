@@ -406,7 +406,7 @@ def get_chunk_similarities(
         "knn": {
             "field": "embedding",
             "query_vector": _get_embedding(term),
-            "k": 128,
+            "k": 1000,
             "num_candidates": 1000,
             "filter": {"term": {"eid": episode.eid}},
         },
@@ -521,7 +521,7 @@ def bin_relevance_scores(relevance_df, ep_duration, n_bins=500):
                 avg_score = overlapping_chunks["similarity_score"].mean()
         else:
             # No chunks in this bin
-            avg_score = 0.0
+            avg_score = np.nan
 
         binned_scores.append(avg_score)
 
