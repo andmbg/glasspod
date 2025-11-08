@@ -1,0 +1,17 @@
+{
+    // Formatting (Black)
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true
+    },
+    
+    // Use Ruff instead of Flake8
+    "ruff.enable": true,
+    "ruff.lint.enable": true,
+    
+    // Disable other linters
+    "flake8.enabled": false,
+
+    // Show ruler at line length
+    "editor.rulers": [88]
+}

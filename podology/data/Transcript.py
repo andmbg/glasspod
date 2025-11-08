@@ -1,15 +1,17 @@
+"""Module for Transcript class."""
+
 from collections import Counter
 import re
 from types import NoneType
-from typing import List, Optional
+from typing import List
 import json
-from pathlib import Path
+import time
 
 import dash_mantine_components as dmc
 from dash import html
 from loguru import logger
 import pandas as pd
-from numpy import mean
+import numpy as np
 
 from podology.data.Episode import Episode
 from podology.search.utils import format_time
@@ -22,27 +24,24 @@ OVERLAP = EMBEDDER_ARGS["overlap"]
 
 
 class Transcript:
+    """Class representing the transcript of an episode."""
 
     def __init__(self, episode: Episode):
-        # Take over episode attributes:
+        if not episode.transcript.status:
+            raise ValueError(f"Episode {episode.eid} has not been transcribed.")
+        path = TRANSCRIPT_DIR / f"{episode.eid}.json"
+        if not path.exists():
+            raise ValueError(f"Transcript not available for episode {episode.eid}.")
+
         self.episode = episode
 
-        if self.episode.transcript.status:
-            path = TRANSCRIPT_DIR / f"{self.episode.eid}.json"
-            if not path.exists():
-                raise ValueError(
-                    f"Transcript not available for episode {self.episode.eid}."
-                )
-
-            self.raw_segs = json.load(open(path, "r"))
-            self._set_transcript_data()
-
-    def _set_transcript_data(self):
-        wordlist = []
+        with open(path, "r", encoding="utf-8") as f:
+            self.raw_segs = json.load(f)["segments"]
 
         # set word and segment df from raw_segs:
+        wordlist = []
         wid = 0
-        for s, segment in enumerate(self.raw_segs.get("segments", [])):
+        for s, segment in enumerate(self.raw_segs):
             for w, word in enumerate(segment.get("words", [])):
                 wordlist.append(
                     {
@@ -60,22 +59,20 @@ class Transcript:
         # word_df: DataFrame containing word-level information
         #
         self.word_df = pd.DataFrame(wordlist)[
-            ["wid", "word", "start", "end"]
+            ["wid", "word", "start", "end", "sid", "speaker"]
         ].set_index("wid")
 
         #
         # segment_df: DataFrame containing segment-level information
         #
         self.segment_df = (
-            pd.DataFrame(wordlist)
-            .reset_index()
+            self.word_df.reset_index()
             .groupby("sid")
             .agg(
-                start=("index", "min"),
-                end=("index", "max"),
+                start=("wid", "min"),
+                end=("wid", "max"),
                 speaker=("speaker", _most_frequent),
             )
-            # .reset_index()
             .rename(
                 columns={
                     "start": "first_word_idx",
@@ -83,125 +80,8 @@ class Transcript:
                 }
             )
         )
-
-        #
-        # chunk_df: DataFrame containing chunk-level information
-        #
-        segments = self.raw_segs["segments"]
-        n_segments = len(segments)
-        chunks = []
-        s_idx = 0
-        chunk_word_idx_first = 0
-        chunk_word_idx_last = -1
-
-        while s_idx < n_segments:
-            current_chunk = []
-            current_chunk_wc = 0
-            chunk_start_idx = s_idx
-
-            # Concatenate segments; min_words is hard, max_words is soft:
-            while s_idx < n_segments and (
-                # currently too short (below min_words)
-                current_chunk_wc < MIN_WORDS
-                or (
-                    # would be in range with this seg (min < _ <= max_words)
-                    current_chunk_wc + len(segments[s_idx]["words"])
-                    <= MAX_WORDS
-                )
-            ):
-                current_seg_wc = len(segments[s_idx]["words"])
-                current_chunk_wc += current_seg_wc
-                current_chunk.append(current_seg_wc)
-                s_idx += 1
-
-            chunk_word_idx_first = chunk_word_idx_last + 1
-            chunk_word_idx_last = chunk_word_idx_first + current_chunk_wc - 1
-
-            chunks.append(
-                {
-                    "first_word_idx": chunk_word_idx_first,
-                    "last_word_idx": chunk_word_idx_last,
-                    "word_count": current_chunk_wc,
-                    "text": " ".join(
-                        [
-                            word["word"]
-                            for seg in segments[chunk_start_idx:s_idx]
-                            for word in seg["words"]
-                        ]
-                    ),
-                }
-            )
-
-            # Calculate overlap in words
-            if OVERLAP > 0.0 and len(current_chunk) > 1:
-                overlap_words = int(current_chunk_wc * OVERLAP)
-                if overlap_words > 0:
-                    # Walk backwards from the end of the chunk to find where to restart
-                    words_seen = 0
-                    rewind_s_idx = len(current_chunk) - 1
-                    while rewind_s_idx > 0 and words_seen < overlap_words:
-                        words_seen += current_chunk[rewind_s_idx]
-                        chunk_word_idx_last -= current_chunk[rewind_s_idx]
-                        rewind_s_idx -= 1
-                    next_start_idx = chunk_start_idx + rewind_s_idx + 1
-                    # Only continue if enough segments remain for a new chunk
-                    if (
-                        next_start_idx >= n_segments
-                        or next_start_idx == chunk_start_idx
-                    ):
-                        break
-                    s_idx = next_start_idx
-                else:
-                    break  # No overlap, so we're done
-
-            while (
-                len(chunks) > 1
-                and chunks[-2]["last_word_idx"] == chunks[-1]["last_word_idx"]
-            ):
-                chunks.pop(-1)
-
-        chunks = [
-            {
-                "cid": i,
-                "first_word_idx": chunk["first_word_idx"],
-                "last_word_idx": chunk["last_word_idx"],
-                "word_count": chunk["word_count"],
-                "text": chunk["text"],
-            }
-            for i, chunk in enumerate(chunks)
-        ]
-
-        self.chunk_df = pd.DataFrame(chunks).set_index("cid")
-
-        # Update word_df to contain word- segment- and chunk level information:
-        self.word_df["sid"] = None
-        self.word_df["cid"] = None
-
-        # Segment info:
-        for sid, segment in self.segment_df.iterrows():
-            mask = (self.word_df.index >= segment["first_word_idx"]) & (
-                self.word_df.index <= segment["last_word_idx"]
-            )
-            self.word_df.loc[mask, "sid"] = int(sid)
-        self.word_df["sid"] = self.word_df["sid"].astype(int)
-
-        # Chunk info:
-        self.word_df["cid"] = None
-        for cid, chunk in self.chunk_df.iterrows():
-            mask_no_cid = (
-                (self.word_df.index >= chunk["first_word_idx"])
-                & (self.word_df.index <= chunk["last_word_idx"])
-                & (self.word_df.cid.isna())
-            )
-            mask_has_cid = (
-                (self.word_df.index >= chunk["first_word_idx"])
-                & (self.word_df.index <= chunk["last_word_idx"])
-                & (self.word_df.cid.notna())
-            )
-            self.word_df.loc[mask_no_cid, "cid"] = str(cid)
-            self.word_df.loc[mask_has_cid, "cid"] = self.word_df.loc[
-                mask_has_cid, "cid"
-            ].apply(lambda x: f"{x},{cid}")
+        self.chunk_df = self._set_chunk_df()
+        self._add_sid_cid_into_worddf()
 
     def words(
         self,
@@ -247,11 +127,9 @@ class Transcript:
 
         # Validate parameters
         # -------------------
-        assert (
-            all([a in available_word_attrs for a in word_attr])
-            and all([a in available_seg_attrs for a in seg_attr if seg_attr])
-            and all([a in available_ep_attrs for a in ep_attr if ep_attr])
-        )
+        assert all([a in available_word_attrs for a in word_attr])
+        assert all([a in available_seg_attrs for a in seg_attr if seg_attr])
+        assert all([a in available_ep_attrs for a in ep_attr if ep_attr])
 
         # Base df with word_attrs:
         if seg_attr:
@@ -379,8 +257,12 @@ class Transcript:
         attrs = [a for a in available_attrs if a in set(attrs).union({"text"})]
 
         df = self.chunk_df.copy()
+
         df = pd.merge(
-            df, self.word_df[["start"]], left_on="first_word_idx", right_index=True
+            df,
+            self.word_df[["start"]],
+            left_on="first_word_idx",
+            right_index=True,
         )
         df = pd.merge(
             df,
@@ -410,7 +292,9 @@ class Transcript:
                 assert vector_df.shape[0] == df.shape[0]
                 df["vector"] = vector_df["embedding"].tolist()
             except AssertionError:
-                logger.error(f"Vector shape mismatch: {vector_df.shape[0]} vs {df.shape[0]}")
+                logger.error(
+                    f"Vector shape mismatch: {vector_df.shape[0]} vs {df.shape[0]}"
+                )
 
             return df
 
@@ -468,7 +352,6 @@ class Transcript:
                 return span_content
 
             text = _highlight_text(seg["text"], re_pattern_colorid)
-            cids = seg["cid"].split(",")
 
             return html.Span(
                 _highlight_to_html_elements(text),
@@ -539,6 +422,125 @@ class Transcript:
             )
 
         return turns
+
+    def _set_chunk_df(self) -> pd.DataFrame:
+
+        n_segments = len(self.raw_segs)
+        chunks = []
+        s_idx = 0
+        chunk_word_idx_first = 0
+        chunk_word_idx_last = -1
+
+        while s_idx < n_segments:
+            current_chunk = []
+            current_chunk_wc = 0
+            chunk_start_idx = s_idx
+
+            # Concatenate segments; min_words is hard, max_words is soft:
+            while s_idx < n_segments and (
+                # currently too short (below min_words)
+                current_chunk_wc < MIN_WORDS
+                or (
+                    # would be in range with this seg (min < _ <= max_words)
+                    current_chunk_wc + len(self.raw_segs[s_idx]["words"])
+                    <= MAX_WORDS
+                )
+            ):
+                current_seg_wc = len(self.raw_segs[s_idx]["words"])
+                current_chunk_wc += current_seg_wc
+                current_chunk.append(current_seg_wc)
+                s_idx += 1
+
+            chunk_word_idx_first = chunk_word_idx_last + 1
+            chunk_word_idx_last = chunk_word_idx_first + current_chunk_wc - 1
+
+            chunks.append(
+                {
+                    "first_word_idx": chunk_word_idx_first,
+                    "last_word_idx": chunk_word_idx_last,
+                    "word_count": current_chunk_wc,
+                    "text": " ".join(
+                        [
+                            word["word"]
+                            for seg in self.raw_segs[chunk_start_idx:s_idx]
+                            for word in seg["words"]
+                        ]
+                    ),
+                }
+            )
+
+            # Calculate overlap in words
+            if OVERLAP > 0.0 and len(current_chunk) > 1:
+                overlap_words = int(current_chunk_wc * OVERLAP)
+                if overlap_words > 0:
+                    # Walk backwards from the end of the chunk to find where to restart
+                    words_seen = 0
+                    rewind_s_idx = len(current_chunk) - 1
+                    while rewind_s_idx > 0 and words_seen < overlap_words:
+                        words_seen += current_chunk[rewind_s_idx]
+                        chunk_word_idx_last -= current_chunk[rewind_s_idx]
+                        rewind_s_idx -= 1
+                    next_start_idx = chunk_start_idx + rewind_s_idx + 1
+                    # Only continue if enough segments remain for a new chunk
+                    if (
+                        next_start_idx >= n_segments
+                        or next_start_idx == chunk_start_idx
+                    ):
+                        break
+                    s_idx = next_start_idx
+                else:
+                    break  # No overlap, so we're done
+
+            while (
+                len(chunks) > 1
+                and chunks[-2]["last_word_idx"] == chunks[-1]["last_word_idx"]
+            ):
+                chunks.pop(-1)
+
+        chunks = [
+            {
+                "cid": i,
+                "first_word_idx": chunk["first_word_idx"],
+                "last_word_idx": chunk["last_word_idx"],
+                "word_count": chunk["word_count"],
+                "text": chunk["text"],
+            }
+            for i, chunk in enumerate(chunks)
+        ]
+
+        return pd.DataFrame(chunks).set_index("cid")
+
+    def _add_sid_cid_into_worddf(self):
+
+        # Update word_df to contain word- segment- and chunk level information:
+        self.word_df["sid"] = None
+        self.word_df["cid"] = None
+
+        # Segment info:
+        for sid, segment in self.segment_df.iterrows():
+            mask = (self.word_df.index >= segment["first_word_idx"]) & (
+                self.word_df.index <= segment["last_word_idx"]
+            )
+            self.word_df.loc[mask, "sid"] = int(sid)
+        self.word_df["sid"] = self.word_df["sid"].astype(int)
+
+        # Chunk info:
+        self.word_df["cid"] = None
+        for cid, chunk in self.chunk_df.iterrows():
+            mask_no_cid = (
+                (self.word_df.index >= chunk["first_word_idx"])
+                & (self.word_df.index <= chunk["last_word_idx"])
+                & (self.word_df.cid.isna())
+            )
+            mask_has_cid = (
+                (self.word_df.index >= chunk["first_word_idx"])
+                & (self.word_df.index <= chunk["last_word_idx"])
+                & (self.word_df.cid.notna())
+            )
+            self.word_df.loc[mask_no_cid, "cid"] = str(cid)
+            self.word_df.loc[mask_has_cid, "cid"] = self.word_df.loc[
+                mask_has_cid, "cid"
+            ].apply(lambda x: f"{x},{cid}")
 
 
 def _most_frequent(lst: pd.Series) -> str | None:

@@ -44,16 +44,26 @@ flake8 = "^7.1.1"
 pytest = "^8.3.4"
 jupyter = "^1.1.1"
 nbconvert = "^7.16.4"
+ruff = "^0.14.3"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py312']
-include = '\.pyi?$'
+exclude = [".git", "__pycache__", ".venv"]
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503"]
+[tool.ruff.lint]
+extend-ignore = [
+    "PLW1514"
+]
+
+# [tool.black]
+# line-length = 88
+# target-version = ['py312']
+# include = '\.pyi?$'
+
+# [tool.flake8]
+# max-line-length = 88
+# extend-ignore = ["E203", "W503", "E501"]

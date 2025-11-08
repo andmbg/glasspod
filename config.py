@@ -54,9 +54,9 @@ TRANSCRIBER_CLASS = "podology.data.transcribers.whisperx.WhisperXTranscriber"
 TRANSCRIBER_ARGS = {
     "whisperx_url": os.getenv("TRANSCRIBER_URL_PORT"),
     "api_token": os.getenv("API_TOKEN"),
-    "use_gpu": True,
+    "use_gpu": False,
     "language": "en",
-    "model": "distil-large-v3",
+    "model": "tiny",
     "min_speakers": 2,
     "max_speakers": 5,
 }
@@ -70,7 +70,7 @@ TRANSCRIBER_ARGS = {
 # however yield < min_words, it is included nevertheless. So min_words is a hard limit,
 # max_words a soft limit.
 EMBEDDER_ARGS = {
-    "url": os.getenv("TRANSCRIBER_URL_PORT"),
+    "url": os.getenv("EMBEDDER_URL_PORT", "http://embedder:19001"),
     "model": os.getenv("EMBEDDER_MODEL", "multi-qa-mpnet-base-dot-v1"),
     "dims": int(os.getenv("EMBEDDER_DIMS", 768)),
     "min_words": 100,
@@ -133,6 +133,7 @@ WORDCLOUD_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 ES_PORT = int(os.getenv("ELASTICSEARCH_PORT", 0))
+
 
 def get_class(class_path):
     module_name, class_name = class_path.rsplit(".", 1)

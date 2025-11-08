@@ -12,9 +12,10 @@ from dotenv import find_dotenv, load_dotenv
 
 from loguru import logger
 import requests
+import pandas as pd
 
 from podology.data.transcribers.base import Transcriber
-from config import TRANSCRIPT_DIR, TRANSCRIBER_ARGS
+from config import TRANSCRIPT_DIR
 
 load_dotenv(find_dotenv(), override=True)
 
@@ -55,7 +56,7 @@ class WhisperXTranscriber(Transcriber):
     def _test_connection(self) -> None:
         """Test if the WhisperX service is reachable"""
         try:
-            response = requests.get(f"{self.whisperx_url}/", timeout=10)
+            response = requests.get(f"{self.whisperx_url}/health", timeout=10)
             if response.status_code != 200:
                 logger.warning(
                     f"WhisperX service returned status {response.status_code}"
@@ -75,16 +76,15 @@ class WhisperXTranscriber(Transcriber):
 
         try:
             result = self._transcribe_audio(audio_path)
-
-            # Store result locally with job_id
-            self._store_result(job_id, result)
-
-            logger.info(f"Transcription completed for job {job_id}")
-
         except Exception as e:
             logger.error(f"Transcription failed for job {job_id}: {e}")
             # Store error status
             raise
+
+        # Store result locally with job_id
+        self._store_result(job_id, result)
+
+        logger.info(f"Transcription completed for job {job_id}")
 
     def _transcribe_audio(self, audio_path: Path) -> Dict:
         """Call the WhisperX service for transcription"""
@@ -128,7 +128,7 @@ class WhisperXTranscriber(Transcriber):
                 )
 
             result = response.json()
-            logger.debug(f"WhisperX service completed successfully")
+            logger.debug("WhisperX service completed successfully")
 
             # Process and normalize the result
             return self._fix_microservice_format(result)

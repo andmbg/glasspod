@@ -345,7 +345,7 @@ indent-after-paren=4
 indent-string='    '
 
 # Maximum number of characters on a single line.
-max-line-length=120
+max-line-length=100
 
 # Maximum number of lines in a module.
 max-module-lines=1000
@@ -438,7 +438,8 @@ disable=raw-checker-failed,
         deprecated-pragma,
         use-implicit-booleaness-not-comparison-to-string,
         use-implicit-booleaness-not-comparison-to-zero,
-        use-symbolic-message-instead
+        use-symbolic-message-instead,
+        W1514
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -600,7 +601,7 @@ ignored-classes=optparse.Values,thread._local,_thread._local,argparse.Namespace
 # of finding the hint is based on edit distance.
 missing-member-hint=yes
 
-# The minimum edit distance a name should have in order to be considered a
+# The maximum edit distance a name should have in order to be considered a
 # similar match for a missing member name.
 missing-member-hint-distance=1
 

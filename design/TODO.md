@@ -48,7 +48,12 @@
   
 # IMMINENT
 
-- make the project choice and RSS URL into parameters to set in the podology docker-compose.yml
+- WhisperX alignment issue:
+  - test if it works now (no)
+  - diarization has not worked for the last batch of episodes
+  - switch versions of whisperx or backend
+- Get alignment/diarization working first, only then go back to null timestamps
+
 
 
 # Bugs

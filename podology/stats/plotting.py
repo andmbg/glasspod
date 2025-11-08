@@ -440,7 +440,7 @@ def _get_embedding(term: str) -> List[float]:
         vec = model.encode(term)
         a = np.asarray(vec, dtype=float)
         n = np.linalg.norm(a) + 1e-12
-        vec = (a / n)
+        vec = a / n
     # ensure list
     return list(vec)
 

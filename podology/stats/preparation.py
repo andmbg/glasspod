@@ -14,7 +14,6 @@ from typing import List, Optional, TYPE_CHECKING
 
 import pandas as pd
 from loguru import logger
-from redis import Redis
 import requests
 
 from config import (
@@ -395,7 +394,7 @@ def store_chunk_embeddings(episodes: List[Episode]):
     ]
 
     for episode in ep_to_do:
-        logger.debug(f"{episode.eid}: Getting chunk embeddings from WhisperX service")
+        logger.debug(f"{episode.eid}: Getting chunk embeddings from Embedder service")
 
         transcript = None
         chunks = None
@@ -432,9 +431,10 @@ def store_chunk_embeddings(episodes: List[Episode]):
 
                 # Stream directly to file instead of loading into memory
                 chunk_path = CHUNKS_DIR / f"{episode.eid}_chunks.json"
-                with open(chunk_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
+                chunks = response.json()
+
+                with open(chunk_path, "w") as f:
+                    json.dump(chunks, f, indent=2)
 
             finally:
                 if response:
