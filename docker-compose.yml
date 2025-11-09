@@ -74,7 +74,7 @@ services:
     restart: unless-stopped
 
   embedder:
-    image: andmbg/embedder:latest
+    image: ghcr.io/andmbg/embedder:latest
     env_file:
       - .env
     ports:

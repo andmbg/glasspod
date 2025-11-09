@@ -28,7 +28,7 @@ class WhisperXTranscriber(Transcriber):
     def __init__(
         self,
         whisperx_url: str,
-        use_gpu: bool = True,
+        device: str = "cpu",
         api_token: Optional[str] = None,
         language: str = "auto",
         model: str = "base",
@@ -36,7 +36,7 @@ class WhisperXTranscriber(Transcriber):
         max_speakers: int = 5,
     ):
         self.whisperx_url = whisperx_url.rstrip("/")
-        self.use_gpu = use_gpu
+        self.device = device
         self.api_token = api_token or os.getenv("API_TOKEN")
         self.headers = {}
         if self.api_token:
@@ -47,7 +47,7 @@ class WhisperXTranscriber(Transcriber):
         self.max_speakers = max_speakers
 
         logger.debug(
-            f"Initialized WhisperXTranscriber (url={self.whisperx_url}, gpu={self.use_gpu})"
+            f"Initialized WhisperXTranscriber (url={self.whisperx_url}, device={self.device})"
         )
 
         # Test connection on initialization
@@ -95,7 +95,6 @@ class WhisperXTranscriber(Transcriber):
             data = {
                 "task": "transcribe",
                 "language": self.language,
-                "model": self.model,
             }
 
             params = {
@@ -225,4 +224,6 @@ class WhisperXTranscriber(Transcriber):
             raise RuntimeError(f"Failed to download transcript for job {eid}: {e}")
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(url={self.whisperx_url}, gpu={self.use_gpu})"
+        return (
+            f"{self.__class__.__name__}(url={self.whisperx_url}, device={self.device})"
+        )

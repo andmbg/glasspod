@@ -54,9 +54,9 @@ TRANSCRIBER_CLASS = "podology.data.transcribers.whisperx.WhisperXTranscriber"
 TRANSCRIBER_ARGS = {
     "whisperx_url": os.getenv("TRANSCRIBER_URL_PORT"),
     "api_token": os.getenv("API_TOKEN"),
-    "use_gpu": False,
+    "device": "cuda",
     "language": "en",
-    "model": "tiny",
+    "model": "large-v3",
     "min_speakers": 2,
     "max_speakers": 5,
 }
