@@ -10,7 +10,6 @@ from redis import Redis
 from podology.data.Episode import AudioInfo, Episode, Status, TranscriptInfo
 from config import (
     DB_PATH,
-    DUMMY_AUDIO,
     AUDIO_DIR,
     TRANSCRIPT_DIR,
     WORDCLOUD_DIR,
