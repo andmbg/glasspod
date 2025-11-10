@@ -19,7 +19,9 @@ from config import (
 from podology.data.transcribers.transcription_worker import transcription_worker
 
 
-redis_conn = Redis(host=os.getenv("REDIS_HOST", "localhost"), port=int(os.getenv("REDIS_PORT") or 6379))
+redis_conn = Redis(
+    host=os.getenv("REDIS_HOST", "localhost"), port=int(os.getenv("REDIS_PORT") or 6379)
+)
 transcription_q = Queue(connection=redis_conn, name="transcription")
 
 
@@ -106,9 +108,7 @@ class EpisodeStore:
             wcstatus=(
                 Status[transcript_wcstatus] if transcript_wcstatus else Status.NOT_DONE
             ),
-            chunkstatus=(
-                Status[chunkstatus] if chunkstatus else Status.NOT_DONE
-            ),
+            chunkstatus=(Status[chunkstatus] if chunkstatus else Status.NOT_DONE),
         )
 
         audio = AudioInfo(
@@ -193,23 +193,16 @@ class EpisodeStore:
             logger.info(f"{episode.eid}: Audio already exists")
             episode.audio.status = Status.DONE
         else:
-            if self.dummy_audio:
-                logger.info(f"{episode.eid}: Creating dummy audio")
-                with open(audio_path, "w") as file:
-                    file.write("I am a dummy audio file.")
+            episode.audio.status = Status.PROCESSING
+            self.add_or_update(episode)
+            logger.info(f"{episode.eid}: Downloading audio from {episode.url}")
+            try:
+                response = requests.get(episode.url, timeout=30)
+                with open(audio_path, "wb") as file:
+                    file.write(response.content)
                 episode.audio.status = Status.DONE
-
-            else:
-                episode.audio.status = Status.PROCESSING
-                self.add_or_update(episode)
-                logger.info(f"{episode.eid}: Downloading audio from {episode.url}")
-                try:
-                    response = requests.get(episode.url, timeout=30)
-                    with open(audio_path, "wb") as file:
-                        file.write(response.content)
-                    episode.audio.status = Status.DONE
-                except requests.RequestException as e:
-                    episode.audio.status = Status.ERROR
+            except requests.RequestException as e:
+                episode.audio.status = Status.ERROR
 
         # Persist changes to the database
         self.add_or_update(episode)

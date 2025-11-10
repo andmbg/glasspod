@@ -14,24 +14,13 @@ logger.add(
     level=os.getenv("LOG_LEVEL", "DEBUG"),
 )
 
-PROJECT_NAME = "Creative Commons"
-SOURCE = "https://anchor.fm/s/4d70d828/podcast/rss"  # your RSS feed
-
-# PROJECT_NAME = "Knowledge Fight"
-# SOURCE = "http://feeds.libsyn.com/92106/rss"
-
+PROJECT_NAME = os.getenv("PROJECT_NAME", "Creative Commons")
+SOURCE = os.getenv("SOURCE", "https://anchor.fm/s/4d70d828/podcast/rss")
 # If READONLY is True, no new jobs can be started from the dashboard and the
 # 1 Hz polling for download/transcription status is turned off:
-READONLY = True
+READONLY = os.getenv("READONLY", "False") == "True"
 
 # -----------------------------------------------------------------------------
-
-
-# If developing, use the Test project:
-test = os.getenv("TEST", "False") == "True"
-if test:
-    PROJECT_NAME = "Test"
-    SOURCE = "./tests/Test_RSS.rss"  # your RSS feed
 
 # Make the app prefix-aware:
 BASE_PATH = os.getenv("DASH_URL_PREFIX", "/")
@@ -43,13 +32,11 @@ if not BASE_PATH.endswith("/"):
 #
 
 # Connector:
+# Meant to open the app to more data sources in the future.
 CONNECTOR_CLASS = "podology.data.connectors.rss.RSSConnector"
 CONNECTOR_ARGS = {"remote_resource": SOURCE}
 
 # Transcriber:
-# Dummy audio is for testing: no audio files are downloaded. If True and using
-# the WhisperX transcriber API, its endpoint should be set to "dummytranscribe" below.
-DUMMY_AUDIO = False
 TRANSCRIBER_CLASS = "podology.data.transcribers.whisperx.WhisperXTranscriber"
 TRANSCRIBER_ARGS = {
     "whisperx_url": os.getenv("TRANSCRIBER_URL_PORT"),
