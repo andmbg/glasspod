@@ -36,7 +36,6 @@ class EpisodeStore:
         self.transcript_dir = TRANSCRIPT_DIR
         self.wordcloud_dir = WORDCLOUD_DIR
         self.chunks_dir = CHUNKS_DIR
-        self.dummy_audio = DUMMY_AUDIO
         self._ensure_table()
 
     def _connect(self):
