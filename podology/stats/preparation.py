@@ -34,6 +34,7 @@ from podology.stats.nlp import (
 from podology.search.elasticsearch import (
     index_segments,
     index_chunks,
+    index_episode_embeddings,
     setup_elasticsearch_indices,
 )
 
@@ -61,6 +62,7 @@ def post_process_pipeline(
     index_segments(episodes)
     store_chunk_embeddings(episodes)
     index_chunks(episodes)  # depends on store_chunk_embeddings()
+    index_episode_embeddings(episodes)
     get_word_counts(episodes)
     store_wordclouds(episodes)
     store_timed_named_entities(episodes)

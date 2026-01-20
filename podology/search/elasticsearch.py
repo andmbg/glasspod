@@ -5,7 +5,6 @@ import os
 import json
 import time
 from pathlib import Path
-from datetime import datetime
 import multiprocessing
 from typing import List
 
@@ -13,6 +12,7 @@ from loguru import logger
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.helpers import BulkIndexError
 from elastic_transport import ConnectionError
+import numpy as np
 
 from config import PROJECT_NAME, TRANSCRIPT_DIR, CHUNKS_DIR, EMBEDDER_ARGS, ES_PORT
 from podology.data.Episode import Episode
@@ -21,6 +21,8 @@ from podology.search.utils import make_index_name
 
 TRANSCRIPT_INDEX_NAME = make_index_name(PROJECT_NAME, suffix="")
 CHUNK_INDEX_NAME = make_index_name(PROJECT_NAME, suffix="_chunks")
+EPISODE_INDEX_NAME = make_index_name(PROJECT_NAME, suffix="_episodes")
+
 STATS_PATH = Path(__file__).parent.parent / "data" / PROJECT_NAME / "stats"
 MAX_PARALLEL_INDEXING_PROCESSES = 4  # max: multiprocessing.cpu_count()
 
@@ -51,6 +53,23 @@ CHUNK_INDEX_SETTINGS = {
             "start": {"type": "keyword"},
             "end": {"type": "keyword"},
             "vector": {
+                "type": "dense_vector",
+                "dims": EMBEDDER_ARGS["dims"],
+                "index": True,
+                "similarity": "dot_product",
+            },
+        }
+    },
+}
+
+EPISODE_INDEX_SETTINGS = {
+    "settings": {"number_of_shards": 1, "number_of_replicas": 0},
+    "mappings": {
+        "properties": {
+            "eid": {"type": "keyword"},
+            "pub_date": {"type": "date"},
+            "title": {"type": "text"},
+            "episode_vector": {
                 "type": "dense_vector",
                 "dims": EMBEDDER_ARGS["dims"],
                 "index": True,
@@ -218,3 +237,82 @@ def is_indexed_by_eid(eid: str, es_client: Elasticsearch, index_name: str) -> bo
     except Exception as e:
         logger.error(f"Error checking index for episode {eid}: {e}")
         return False
+
+
+def create_episode_embeddings(episode: Episode) -> List[float]:
+    """
+    Create episode-level embedding by averaging its chunk embeddings.
+    Returns L2-normalized vector for dot_product similarity.
+    """
+    chunks_file = CHUNKS_DIR / f"{episode.eid}_chunks.json"
+
+    if not chunks_file.exists():
+        logger.warning(f"{episode.eid}: chunks file not found")
+        return None
+
+    chunks = json.load(open(chunks_file, "r"))
+    vectors = [chunk["embedding"] for chunk in chunks if "embedding" in chunk]
+
+    if not vectors:
+        return None
+
+    # Mean pooling
+    episode_vector = np.mean(vectors, axis=0)
+
+    # L2 normalize for dot_product similarity (required by Elasticsearch)
+    norm = np.linalg.norm(episode_vector)
+    if norm > 0:
+        episode_vector = episode_vector / norm
+
+    return episode_vector.tolist()
+
+
+def index_episode_embeddings(episodes: List[Episode]) -> None:
+    """
+    Index episode-level embeddings into Elasticsearch.
+    Called during post_process_pipeline.
+    """
+    logger.info("Starting Episode indexing")
+    es_client = get_es_client()
+
+    if not es_client.indices.exists(index=EPISODE_INDEX_NAME):
+        logger.info(f"Creating episode embeddings index: {EPISODE_INDEX_NAME}")
+        es_client.indices.create(index=EPISODE_INDEX_NAME, body=EPISODE_INDEX_SETTINGS)
+
+    actions = []
+
+    for episode in episodes:
+        if is_indexed_by_eid(episode.eid, es_client, EPISODE_INDEX_NAME):
+            logger.debug(f"{episode.eid} episode embedding already indexed.")
+            continue
+
+        episode_vector = create_episode_embeddings(episode)
+
+        if episode_vector is None:
+            logger.warning(
+                f"{episode.eid}: No chunks found, skipping episode embedding"
+            )
+            continue
+
+        doc = {
+            "_index": EPISODE_INDEX_NAME,
+            "_id": episode.eid,
+            "_source": {
+                "eid": episode.eid,
+                "pub_date": episode.pub_date,
+                "title": episode.title,
+                "episode_vector": episode_vector,
+            },
+        }
+
+        logger.debug(f"{episode.eid}: storing and indexing episode-level embedding")
+        actions.append(doc)
+
+    # Bulk index
+    if actions:
+        try:
+            helpers.bulk(es_client, actions)
+            logger.info(f"Indexed {len(actions)} episode embeddings")
+        except BulkIndexError as e:
+            logger.error(f"Bulk indexing failed: {e.errors}")
+            raise

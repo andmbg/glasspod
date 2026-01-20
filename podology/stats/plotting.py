@@ -20,6 +20,7 @@ from podology.data.Transcript import Transcript
 from podology.search.search_classes import ResultSet
 from podology.stats.preparation import DB_PATH
 from podology.frontend.utils import colorway, empty_term_hit_fig
+from podology.stats.counting import get_term_frequencies, get_concept_relevances
 from config import HITS_PLOT_BINS, EMBEDDER_ARGS
 
 
@@ -30,58 +31,108 @@ _transcript_cache = {}
 
 
 def plot_word_freq(
-    term_colid_tuples: List[tuple], es_client: Elasticsearch, template: str = "plotly"
+    key_colid_tuples: List[tuple], es_client: Elasticsearch, template: str = "plotly"
 ) -> go.Figure:
-    """Time series plot of word frequencies in the Across Episodes tab.
+    """Time series plot of both word frequencies and concept relevances
+    in the Across Episodes tab.
 
-    Takes part of the term store content where terms are paired with
-    color IDs, and an Elasticsearch client. Returns a Plotly Figure.
+    To make them comparable, we standardize both measures to 0..1 and put
+    them on the same y axis.
     """
-    df, term_colid_dict = _get_all_episode_term_counts(term_colid_tuples, es_client)
-
     fig = go.Figure()
+    yaxis_range = [0, 1]
 
-    for term, grp in df.groupby("term"):
+    # Part 1: Term frequencies
+    term_colid_tuples = [i for i in key_colid_tuples if i[2] == "term"]
+    if len(term_colid_tuples) > 0:
 
-        fig.add_trace(
-            go.Scatter(
-                x=grp["pub_date"],
-                y=grp["freq1k"],
-                mode="lines+markers",
-                line=dict(
-                    color=colordict[term_colid_dict[term]],
-                    width=0.5,
-                ),
-                marker=dict(
-                    color=colordict[term_colid_dict[term]],
-                    size=4,
-                ),
-                name=term,
-                showlegend=True,
-                customdata=grp[["title", "term", "count", "total", "eid"]],
-                hovertemplate=(
-                    "<b>%{customdata[1]}</b><br>"
-                    "%{y:.2f} words/1000<br>"
-                    "%{customdata[2]} occurrences<br>"
-                    "%{customdata[3]} total<br><br>"
-                    "<i>%{customdata[0]}</i><extra><extra></extra>"
-                ),
+        term_colid_dict = {i[0]: i[1] for i in term_colid_tuples}
+        dft = get_term_frequencies(list(term_colid_dict), es_client=es_client)
+        yaxis_range = [0, dft["freq1k"].max() * 1.1]
+        xaxis_range = [dft.pub_date.min(), dft.pub_date.max()]
+
+        for term, grp in dft.groupby("term"):
+
+            fig.add_trace(
+                go.Scatter(
+                    x=grp["pub_date"],
+                    y=grp["freq1k"],
+                    yaxis="y",
+                    mode="lines+markers",
+                    line=dict(
+                        color=colordict[term_colid_dict[term]],
+                        width=0.5,
+                    ),
+                    marker=dict(
+                        color=colordict[term_colid_dict[term]],
+                        size=4,
+                    ),
+                    name=term,
+                    showlegend=True,
+                    customdata=grp[["title", "term", "count", "total_words"]],
+                    hovertemplate=(
+                        "<b>%{customdata[1]}</b><br>"
+                        "%{y:.2f} words/1000<br>"
+                        "%{customdata[2]} occurrences<br>"
+                        "%{customdata[3]} total<br><br>"
+                        "<i>%{customdata[0]}</i><extra>Term</extra>"
+                    ),
+                )
             )
-        )
 
-        fig.update_layout(
-            template=template,
-            font=dict(size=14),
-            plot_bgcolor="rgba(0,0,0, .0)",
-            paper_bgcolor="rgba(255,255,255, .0)",
-            margin=dict(l=0, r=0, t=0, b=0),
-            legend=dict(
-                y=0.5,
-                yanchor="middle",
+    # Part 2: Semantic relevances
+    concept_colid_tuples = [i for i in key_colid_tuples if i[2] == "semantic"]
+    if len(concept_colid_tuples) > 0:
+
+        concept_colid_dict = {i[0]: i[1] for i in concept_colid_tuples}
+        dfs = get_concept_relevances(list(concept_colid_dict), es_client=es_client)
+        xaxis_range = [dfs.pub_date.min(), dfs.pub_date.max()]
+
+        for concept, grp in dfs.groupby("concept"):
+
+            fig.add_trace(
+                go.Scatter(
+                    x=grp["pub_date"],
+                    y=grp["norm"],
+                    yaxis="y2",
+                    mode="lines",
+                    line=dict(
+                        color=colordict[concept_colid_dict[concept]],
+                        width=0.5,
+                    ),
+                    name=concept,
+                    showlegend=True,
+                    customdata=grp[["title", "concept"]],
+                    hovertemplate=(
+                        "<b>%{customdata[1]}</b><br>"
+                        "%{y:.3f} standardized relevance<br><br>"
+                        "<i>%{customdata[0]}</i><extra>Concept</extra>"
+                    ),
+                )
+            )
+
+    fig.update_layout(
+        template=template,
+        font=dict(size=14),
+        plot_bgcolor="rgba(0,0,0, .0)",
+        paper_bgcolor="rgba(255,255,255, .0)",
+        margin=dict(l=0, r=0, t=0, b=0),
+        legend=dict(
+            y=-0.05,
+            yanchor="top",
+            orientation="h",
+        ),
+        yaxis2=dict(
+            title=dict(
+                text="Standardized Relevance",
+                font=dict(color="rgba(128,128,128, .6)", size=22),
             ),
-        )
-
-        fig.update_yaxes(
+            overlaying="y",
+            side="right",
+            showgrid=False,  # or True if you want gridlines
+            range=[0, 1],
+        ),
+        yaxis=dict(
             gridcolor=(
                 "rgba(255,255,255, .2)"
                 if template == "plotly_dark"
@@ -97,12 +148,13 @@ def plot_word_freq(
                 ),
             ),
             zerolinecolor="rgba(128,128,128, .5)",
-            range=[0, df["freq1k"].max() * 1.1],
-        )
-
-        fig.update_xaxes(
+            range=yaxis_range,
+        ),
+        xaxis=dict(
             showgrid=False,
-        )
+            range=xaxis_range,
+        ),
+    )
 
     return fig
 
@@ -114,6 +166,11 @@ def _get_all_episode_term_counts(
 
     Return a df with a row for each episode (including zero hits). For use
     by the plotting function below.
+
+    Returns:
+        pd.DataFrame with cols [
+            term, eid, pub_date, title, count, colorid, total, freq1k
+        ]
     """
     # Filter out semantic search prompts:
     term_colid_tuples = [i for i in term_colid_tuples if i[2] == "term"]
@@ -180,17 +237,6 @@ def plot_transcript_hits_es(
     """
     if not term_colid_tuples:
         return empty_term_hit_fig
-
-    # Remove leading/trailing punctuation/whitespace:
-    # TODO Necessary?
-    # term_colid_tuples = [
-    #     [
-    #         re.sub(r"(^\W)|(\W$)", "", term).lower(),
-    #         colid,
-    #         term_or_prompt
-    #     ]
-    #     for term, colid, term_or_prompt in term_colid_tuples
-    # ]
 
     # Get episode duration for binning
     episode = EpisodeStore()[eid]
@@ -530,3 +576,15 @@ def bin_relevance_scores(relevance_df, ep_duration, n_bins=500):
             "similarity": binned_scores,
         }
     )
+
+
+def get_relevance_bars(term_colid_tuples, es_client) -> go.Figure:
+    """Plot sorted frequency or relevance bars.
+
+    Args:
+        terms (list): list of terms
+        es_client (_type_): _description_
+
+    Returns:
+        go.Figure: _description_
+    """

@@ -3,7 +3,9 @@ Miscellaneous utility functions.
 """
 
 import re
+
 from bs4 import BeautifulSoup
+import pandas as pd
 
 
 def extract_text_from_html(html_string):
@@ -78,3 +80,21 @@ def make_index_name(project_name, suffix: str = ""):
     project_name += suffix
 
     return project_name
+
+
+def normalize_column(col: pd.Series, min: float = 0.0, max: float = 1.0) -> pd.Series:
+    """Scale float Series to range(min, max).
+
+    Args:
+        col (pd.Series): column or Series to scale
+        min (float, optional): lower end. Defaults to 0.0.
+        max (float, optional): upper end. Defaults to 1.0.
+
+    Returns:
+        pd.Series: scaled Series
+    """
+    min_val = col.min()
+    max_val = col.max()
+    col = (col - min_val) / (max_val - min_val) * (max - min) + min
+
+    return col

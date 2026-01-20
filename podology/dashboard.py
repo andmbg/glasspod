@@ -1244,7 +1244,7 @@ def init_callbacks(app):
         """
         Callback that updates the frequency table view.
         """
-        termtuples = [t for t in terms_store["entries"] if t[2] == "term"]
+        termtuples = terms_store["entries"]
 
         if len(termtuples) == 0:
             return empty_term_fig
