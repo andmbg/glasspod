@@ -2,9 +2,8 @@
 Plotting functions
 """
 
-import os
 from typing import List
-import sqlite3
+from textwrap import wrap
 
 import pandas as pd
 import numpy as np
@@ -17,8 +16,6 @@ from podology.search.elasticsearch import TRANSCRIPT_INDEX_NAME, CHUNK_INDEX_NAM
 from podology.data.EpisodeStore import EpisodeStore
 from podology.data.Episode import Episode
 from podology.data.Transcript import Transcript
-from podology.search.search_classes import ResultSet
-from podology.stats.preparation import DB_PATH
 from podology.frontend.utils import colorway, empty_term_hit_fig
 from podology.stats.counting import get_term_frequencies, get_concept_relevances
 from config import HITS_PLOT_BINS, EMBEDDER_ARGS
@@ -112,13 +109,22 @@ def plot_word_freq(
             )
 
     fig.update_layout(
+        title=dict(
+            text="<b>Time series</b>",
+            font=dict(
+                color="rgba(128,128,128, .6)",
+                size=22,
+            ),
+        ),
         template=template,
         font=dict(size=14),
         plot_bgcolor="rgba(0,0,0, .0)",
         paper_bgcolor="rgba(255,255,255, .0)",
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=0, r=0, t=50, b=0),
         legend=dict(
-            y=-0.05,
+            x=0.5,
+            xanchor="center",
+            y=-0.1,
             yanchor="top",
             orientation="h",
         ),
@@ -157,71 +163,6 @@ def plot_word_freq(
     )
 
     return fig
-
-
-def _get_all_episode_term_counts(
-    term_colid_tuples: List[tuple], es_client: Elasticsearch
-) -> tuple[pd.DataFrame, dict]:
-    """For each term from the terms store, count occurrences in transcripts.
-
-    Return a df with a row for each episode (including zero hits). For use
-    by the plotting function below.
-
-    Returns:
-        pd.DataFrame with cols [
-            term, eid, pub_date, title, count, colorid, total, freq1k
-        ]
-    """
-    # Filter out semantic search prompts:
-    term_colid_tuples = [i for i in term_colid_tuples if i[2] == "term"]
-
-    term_colid_dict = {i[0]: i[1] for i in term_colid_tuples}
-    terms: list[str] = list(term_colid_dict.keys())
-    eids = [ep.eid for ep in episode_store if ep.transcript.status]
-
-    # Span all episodes & dates for every term:
-    df = pd.MultiIndex.from_product([terms, eids], names=["term", "eid"]).to_frame(
-        index=False
-    )
-    df["pub_date"] = df.eid.apply(lambda x: episode_store[x].pub_date)
-    df["title"] = df.eid.apply(lambda x: episode_store[x].title)
-    df["count"] = 0
-    df["colorid"] = pd.NA
-    df.set_index(["term", "eid"], inplace=True)
-
-    # Insert counts of hits into the dataframe:
-    result_set = ResultSet(
-        es_client=es_client,
-        index_name=TRANSCRIPT_INDEX_NAME,
-        term_colorids=term_colid_tuples,
-    )
-    for term, hits in result_set.term_hits.items():
-        df.loc[(term, slice(None)), "colorid"] = term_colid_dict[term]
-
-        for hit in hits:
-            eid = hit["_source"]["eid"]
-            df.loc[(term, eid), "count"] += 1
-
-    df.reset_index(inplace=True)
-
-    # Add total word counts of each episode:
-    unique_eps = tuple(df.eid.unique())
-    unique_eps_query = ",".join(["?"] * len(unique_eps))
-    query = (
-        f"select eid, count as total from word_count where eid in ({unique_eps_query})"
-    )
-    word_counts = pd.read_sql(
-        query,
-        sqlite3.connect(DB_PATH),
-        params=unique_eps,
-    )
-
-    df = pd.merge(df, word_counts, on="eid", how="left")
-    df["freq1k"] = df["count"] / df["total"] * 1000
-
-    df.sort_values("pub_date", inplace=True)
-
-    return df, term_colid_dict
 
 
 def plot_transcript_hits_es(
@@ -578,7 +519,9 @@ def bin_relevance_scores(relevance_df, ep_duration, n_bins=500):
     )
 
 
-def get_relevance_bars(term_colid_tuples, es_client) -> go.Figure:
+def plot_relevance_bars(
+    key_colid_tuples, es_client, template: str = "plotly"
+) -> go.Figure:
     """Plot sorted frequency or relevance bars.
 
     Args:
@@ -588,3 +531,134 @@ def get_relevance_bars(term_colid_tuples, es_client) -> go.Figure:
     Returns:
         go.Figure: _description_
     """
+
+    def _chop_title(s: str, width: int = 30, rows: int = 2) -> str:
+        """Wrap and elide titles if they're too long"""
+        l = wrap(s, width=width)
+        if len(l) > rows:
+            l[rows - 1] = l[rows - 1][:-3] + "..."
+
+        return "<br>".join(l[:rows])
+
+    terms = [i[0] for i in key_colid_tuples if i[2] == "term"]
+    concepts = [i[0] for i in key_colid_tuples if i[2] == "semantic"]
+
+    dft = get_term_frequencies(terms, es_client)
+    dfc = get_concept_relevances(concepts, es_client)
+
+    # Sort both df by the norm values of the search terms in order
+    # of their appearance in key_colid_tuples:
+    sort_df = None
+
+    # sort_df is only made of eid and each key's norm column side by side:
+    for key, colid, search_type in key_colid_tuples:
+        if search_type == "term":
+            subset = dft[dft["term"] == key][["eid", "norm"]].copy()
+        else:  # semantic
+            subset = dfc[dfc["concept"] == key][["eid", "norm"]].copy()
+
+        subset = subset.rename(columns={"norm": f"norm_{key}"})
+
+        if sort_df is None:
+            sort_df = subset
+        else:
+            sort_df = sort_df.merge(subset, on="eid", how="outer")
+
+    # Sort by all norm columns in order (first key has highest priority)
+    sort_columns = [f"norm_{key}" for key, _, _ in key_colid_tuples]
+    eid_order = sort_df.sort_values(sort_columns, ascending=True)["eid"].values
+
+    # Apply the ordering to both dataframes
+    if isinstance(dft, pd.DataFrame):
+        dft["eid"] = pd.Categorical(dft["eid"], categories=eid_order, ordered=True)
+        dft = dft.sort_values("eid").reset_index(drop=True)
+        dft["title_display"] = dft.title.apply(lambda s: _chop_title(s, rows=3))
+
+    if isinstance(dfc, pd.DataFrame):
+        dfc["eid"] = pd.Categorical(dfc["eid"], categories=eid_order, ordered=True)
+        dfc = dfc.sort_values("eid").reset_index(drop=True)
+        dfc["title_display"] = dfc.title.apply(lambda s: _chop_title(s, rows=3))
+
+    # Now we finally plot:
+    # ymax = len(eid_order) - 0.5
+    # ymin = ymax - 15
+
+    fig = go.Figure()
+
+    for key, colorid, type in key_colid_tuples:
+        if type == "term":
+            assert isinstance(dft, pd.DataFrame)
+            tgrp = dft.loc[dft.term.eq(key)]
+            fig.add_trace(
+                go.Bar(
+                    orientation="h",
+                    x=tgrp.norm,
+                    y=tgrp.title_display,
+                    marker_color=colordict[colorid],
+                    name=key,
+                    customdata=tgrp[["count", "freq1k"]],
+                    hovertemplate=(
+                        "<b>%{fullData.name}</b><br><i>(literal search)</i><br><br>"
+                        "%{customdata[0]} occurrences (%{customdata[1]:.2f} per 1,000)<br>"
+                        "Relevance: %{x:.2f}"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+
+        elif type == "semantic":
+            assert isinstance(dfc, pd.DataFrame)
+            cgrp = dfc.loc[dfc.concept.eq(key)]
+            fig.add_trace(
+                go.Bar(
+                    orientation="h",
+                    x=cgrp.norm,
+                    y=cgrp.title_display,
+                    marker_color=colordict[colorid],
+                    name=key,
+                    hovertemplate=(
+                        "<b>%{fullData.name}</b><br><i>(semantic search)</i><br><br>"
+                        "Relevance: %{x:.2f}"
+                    ),
+                )
+            )
+
+    fig.update_layout(
+        template=template,
+        title=dict(
+            text="<b>Most relevant episodes</b>",
+            font=dict(
+                color="rgba(128,128,128, .6)",
+                size=22,
+            ),
+        ),
+        font=dict(
+            size=14,
+        ),
+        bargap=0,
+        bargroupgap=0,
+        barmode="stack",
+        legend=dict(
+            x=0.5,
+            y=1,
+            yanchor="bottom",
+            orientation="h",
+        ),
+        # yaxis=dict(
+        #     range=[ymin, ymax],
+        # ),
+        xaxis=dict(
+            gridwidth=1,
+            griddash="2, 5, 2, 5",
+            gridcolor=(
+                "rgba(255,255,255, .2)"
+                if template == "plotly_dark"
+                else "rgba(0,0,0, .3)"
+            ),
+        ),
+        plot_bgcolor="rgba(0,0,0, 0)",
+        paper_bgcolor="rgba(255,255,255, 0)",
+        showlegend=False,
+    )
+
+    return fig

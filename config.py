@@ -20,6 +20,10 @@ SOURCE = os.getenv("SOURCE", "https://anchor.fm/s/4d70d828/podcast/rss")
 # 1 Hz polling for download/transcription status is turned off:
 READONLY = os.getenv("READONLY", "False") == "True"
 
+# If SKIP_INDEXING is True, skip the post_process_pipeline on startup.
+# Useful for dev when ES indices are already populated:
+SKIP_INDEXING = os.getenv("SKIP_INDEXING", "False") == "True"
+
 # -----------------------------------------------------------------------------
 
 # Make the app prefix-aware:

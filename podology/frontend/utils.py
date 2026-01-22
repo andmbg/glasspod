@@ -3,6 +3,7 @@ from typing import Tuple
 
 from bs4 import BeautifulSoup
 from dash import html
+from dash_iconify import DashIconify
 import plotly.graph_objects as go
 
 idcolor = namedtuple("idcolor", ["id", "color"])
@@ -21,19 +22,36 @@ colorway = [
 colorway.reverse()
 
 
-def clickable_tag(index: int, term_colorid: Tuple[str, int]) -> html.Button:
+def clickable_tag(index: int, term_colorid: Tuple[str, int, str]) -> html.Div:
     """
-    Generate a clickable tag that removes itself when clicked.
+    Generate a tag with reorder and remove controls.
 
-    :param int index: The index of the tag. Used for coloring and for identifying the tag when it comes to removing it.
-    :param str term_colorid: The content of the tag. Can be several words.
-        It needn't be continuous but should be unique.
+    :param int index: The index of the tag. Used for coloring and for identifying
+        the tag when it comes to removing or reordering it.
+    :param term_colorid: Tuple of (term, color_id, term_type).
     """
-    return html.Button(
-        term_colorid[0],
-        id={"type": "remove-term", "index": index},
-        className=f"term-item term-color-{term_colorid[1]}",
-        title=term_colorid[0],
+    term, colorid, termtype = term_colorid
+
+    return html.Div(
+        [
+            # Left arrow (hidden for first item)
+            html.Button(
+                DashIconify(icon="mdi:chevron-left", width=24),
+                id={"type": "move-term-left", "index": index},
+                className="term-arrow",
+                style={"visibility": "hidden" if index == 0 else "visible"},
+            ),
+            # Term text
+            html.Span(term, className="term-text"),
+            # Remove button
+            html.Button(
+                "✕",
+                id={"type": "remove-term", "index": index},
+                className="term-remove",
+            ),
+        ],
+        className=f"term-item term-color-{colorid}",
+        title=term,
     )
 
 
@@ -49,10 +67,34 @@ def get_sort_button(term_colorid: Tuple[str, int]) -> html.Button:
     )
 
 
-empty_term_fig = (
+empty_timeseries = (
     go.Figure()
     .add_annotation(
         text=(
+            "Time series plot<br><br>"
+            "Enter at least one search term<br>"
+            "to see its distribution over episodes."
+        ),
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=0.5,
+        showarrow=False,
+        font=dict(size=20, color="grey"),
+    )
+    .update_layout(
+        plot_bgcolor="rgba(0,0,0, 0)",
+        paper_bgcolor="rgba(0,0,0, 0)",
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    )
+)
+
+empty_ranked_bars = (
+    go.Figure()
+    .add_annotation(
+        text=(
+            "Top relevant episodes plot<br><br>"
             "Enter at least one search term<br>"
             "to see its distribution over episodes."
         ),

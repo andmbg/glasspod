@@ -1,41 +1,24 @@
 # Features to do
 
-- RAG:
-  - Transcript tab looks within-episode.
-    - next to Transcript or search-hit-col: Prompt relevance as lines (or thin rects);
-      you can input up to 10 term searches or prompt searches. Term searches yield term highlights in the transcript and its search-hit-col. Prompt searches yield a line per prompt whose thickness or opacity indicates relevance.
-    
-    - HOW:
-      - add to each segment span the relevance score per prompt
-      - redesign Transcript class: per segment, hold start/end, turn membership, chunk membership; output methods use this.
-
-- Audio Playback on clicking on transcript
-- click on dot in term plot opens episode
-
-- Writeback: When looking at a transcript, I want to be able to
+- [#B] Writeback: When looking at a transcript, I want to be able to
   - re-label speakers
   - correct mistakes
   - ideally, after correction, aggregate a dataset to fine-tune the Whisper model
 
-## Backend:
-
-- move transcript post-processing to the API, make the worker flexible so they can receive a job at any point in the pipeline and do everything downstream
-
 ## Meta/Download tab:
 
-- separate cols for each status
-- project time to finish for whole podcast using timestamps from processing
+- [#B] separate cols for each status
 - BUG: min size of tooltip is too big, short notes leave empty space
-  Ideal: Size of wordcloud + Title + 2-5 lines of notes; click on wordcloud selects episode & transcript tab
+  Ideal: Size of wordcloud + Title + 2-5 lines of notes
+- make click on wordcloud select episode & transcript tab
 
-## Transcript/Episode tab:
+## Within Episode tab:
 
-- cleaner speaker display classes
-- Hide standard scroll thumb, client-callback highlights currently visible time range in transcript hits plot
+- more speaker display classes
 
-## Terms tab:
+## Across Episodes tab:
 
-- Switch between occurrences per 1000 and absolute count on y-axis
+- Timeseries: switch between occurrences per 1000 and absolute count on y-axis
 
 ---
 
@@ -48,12 +31,8 @@
   
 # IMMINENT
 
-- WhisperX alignment issue:
-  - test if it works now (no)
-  - diarization has not worked for the last batch of episodes
-  - switch versions of whisperx or backend
-- Get alignment/diarization working first, only then go back to null timestamps
-
+- We can also store frequencies/relevances in a Store on the client side, so we don't have to get relevance (2 secs runtime in dev) for every key everytime a literal search term changes or so.
+- At some point throughout the transcript, the highlight position and playback position get out of sync for most (not all) episodes.
 
 
 # Bugs
@@ -63,4 +42,3 @@
 - if one search term contains another, highlights in the transcript get messed up.
 - When database-writing operations (like transcript post-processing) are done wholesale with concurrent processing, we get sqlite3 lock errors due to the db being locked on file-level. Writes may have to be queued.
 - API has alignment model hardcoded even though some code suggests parameterization.
-- when I click a card from the Across tab and in the Within tab delete a tag, the selected episode jumps back to where it was before.

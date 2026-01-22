@@ -19,12 +19,17 @@ from podology.data.Transcript import Transcript
 from podology.search.search_classes import ResultSet, create_cards
 from podology.search.elasticsearch import get_es_client, TRANSCRIPT_INDEX_NAME
 from podology.stats.preparation import post_process_pipeline
-from podology.stats.plotting import plot_transcript_hits_es, plot_word_freq
+from podology.stats.plotting import (
+    plot_transcript_hits_es,
+    plot_word_freq,
+    plot_relevance_bars,
+)
 from podology.frontend.utils import (
     clickable_tag,
     colorway,
     get_sort_button,
-    empty_term_fig,
+    empty_timeseries,
+    empty_ranked_bars,
     empty_scroll_fig,
     empty_term_hit_fig,
     format_duration,
@@ -37,7 +42,7 @@ from podology.frontend.help_modals import (
     across_help_modal,
 )
 from podology.frontend.info_tab import create_step_flowchart, info_text
-from config import get_connector, ASSETS_DIR, READONLY, BASE_PATH
+from config import get_connector, ASSETS_DIR, READONLY, BASE_PATH, SKIP_INDEXING
 
 
 max_intervals = 1 if READONLY else None
@@ -47,8 +52,11 @@ poll_interval = dcc.Interval(
 
 episode_store = EpisodeStore()
 
-for pub_ep in get_connector().fetch_episodes():
-    episode_store.add_or_update(pub_ep)
+# (re)load the RSS or other source file to fetch updates if any.
+# ignore if we are in development:
+if not SKIP_INDEXING:
+    for pub_ep in get_connector().fetch_episodes():
+        episode_store.add_or_update(pub_ep)
 
 episode_store.update_from_files()
 
@@ -91,10 +99,12 @@ def init_dashboard(flask_app, route):
     """
     Main function to initialize the dashboard.
     """
-    # Fill the ES index with transcripts:
     es_client = get_es_client()
 
-    post_process_pipeline(episode_store=episode_store)
+    if not SKIP_INDEXING:
+        post_process_pipeline(episode_store=episode_store)
+    else:
+        logger.info("Skipping post_process_pipeline (SKIP_INDEXING=True)")
 
     logger.info(f"Route to podology: {route}")
 
@@ -616,7 +626,7 @@ def init_dashboard(flask_app, route):
                                 # className="m-0 no-top-border",
                                 children=[
                                     #
-                                    # Word frequency plot
+                                    # Time series plot
                                     # ----------------------------
                                     dmc.Grid(
                                         [
@@ -636,9 +646,12 @@ def init_dashboard(flask_app, route):
                                             dmc.GridCol(
                                                 dcc.Graph(
                                                     id="word-count-plot",
-                                                    figure=empty_term_fig,
+                                                    figure=empty_timeseries,
                                                     config={
                                                         "displayModeBar": False,
+                                                    },
+                                                    style={
+                                                        "height": 500,
                                                     },
                                                 ),
                                                 span=12,
@@ -646,36 +659,31 @@ def init_dashboard(flask_app, route):
                                         ]
                                     ),
                                     #
-                                    # List of episodes found in search
+                                    # Top ranked episodes plot
                                     # --------------------------------
                                     dmc.Grid(
                                         [
                                             dmc.GridCol(
-                                                id="episode-column",
-                                                children=[
-                                                    dcc.Store(
-                                                        id="selected-episode", data=""
+                                                html.Div(
+                                                    dcc.Graph(
+                                                        id="ranked-bar-plot",
+                                                        figure=empty_ranked_bars,
+                                                        config={
+                                                            "displayModeBar": False,
+                                                        },
+                                                        style={
+                                                            "height": 40
+                                                            * len(episode_store)
+                                                        },
                                                     ),
-                                                    dcc.Store(id="sorting", data={}),
-                                                    dcc.Store(
-                                                        id="episode-list-data", data=[]
-                                                    ),
-                                                    # dmc.Grid(
-                                                    #     id="sort-buttons",
-                                                    #     style={"position": "relative"},
-                                                    # ),
-                                                    # dmc.Grid(
-                                                    #     children=[
-                                                    #         dmc.Stack(
-                                                    #             id="episode-list",
-                                                    #             gap="xs",
-                                                    #             children=["Episodes"],
-                                                    #         )
-                                                    #     ]
-                                                    # ),
-                                                ],
-                                                span=dict(xs=12, md=6),
-                                            ),
+                                                    style={
+                                                        "height": "700px",
+                                                        "overflowY": "auto",
+                                                        "overflowX": "hidden",
+                                                    },
+                                                ),
+                                                span=12,
+                                            )
                                         ],
                                     ),
                                 ]
@@ -1190,27 +1198,36 @@ def init_callbacks(app):
         At the same time, updates the visual representation of the Store.
         """
         if not ctx.triggered:
-            return terms_store, ""
+            return no_update, no_update
+
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # Only process if this callback's inputs actually triggered it
+        is_input_trigger = trigger_id == "input"
+        is_remove_trigger = "remove-term" in trigger_id and any(
+            x is not None for x in remove_clicks
+        )
+
+        if not is_input_trigger and not is_remove_trigger:
+            return no_update, no_update
 
         # Search mode routing:
         termtype = "semantic" if semantic_search else "term"
 
         # Analyse the search term dict into a list of tuples and the color stack:
-        term_entries = terms_store["entries"]
+        term_entries = list(terms_store["entries"])  # Create a copy
         terms = [i[0] for i in term_entries]
-        colorid_stack = terms_store["colorid-stack"]
-
-        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        colorid_stack = list(terms_store["colorid-stack"])  # Create a copy
 
         # User adds new term by clicking "Add" button or pressing Enter:
-        if trigger_id == "input" and input_term:
+        if is_input_trigger and input_term:
             if len(term_entries) < 10 and input_term not in terms:
                 # assign the first available color to the new term_colorid:
                 new_term_tuple = [input_term, colorid_stack.pop(), termtype]
                 term_entries.append(new_term_tuple)
 
         # A tag was clicked for removal:
-        elif "remove-term" in trigger_id:
+        elif is_remove_trigger:
             index = int(json.loads(trigger_id)["index"])
             if 0 <= index < len(term_entries):
                 freed_colorid = term_entries.pop(index)[1]
@@ -1235,7 +1252,33 @@ def init_callbacks(app):
         return tag_elements
 
     @app.callback(
+        Output("terms-store", "data", allow_duplicate=True),
+        Input({"type": "move-term-left", "index": ALL}, "n_clicks"),
+        State("terms-store", "data"),
+        prevent_initial_call=True,
+    )
+    def move_term_left(n_clicks, terms_store):
+        """Move a term one position to the left in the terms list."""
+        if not ctx.triggered or all(x is None for x in n_clicks):
+            return no_update
+
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        index = json.loads(trigger_id)["index"]
+
+        if index <= 0:
+            return no_update
+
+        entries = list(terms_store["entries"])  # Create a copy
+
+        # Move to top:
+        # entries[index], entries[index - 1] = entries[index - 1], entries[index]
+        entries.insert(0, entries.pop(index))
+
+        return {**terms_store, "entries": entries}
+
+    @app.callback(
         Output("word-count-plot", "figure"),
+        Output("ranked-bar-plot", "figure"),
         Input("terms-store", "data"),
         Input("color-scheme-switch", "checked"),
         prevent_initial_call=True,
@@ -1247,13 +1290,22 @@ def init_callbacks(app):
         termtuples = terms_store["entries"]
 
         if len(termtuples) == 0:
-            return empty_term_fig
+            return empty_timeseries, empty_ranked_bars
 
         template = "plotly_dark" if color_scheme_checked else "plotly"
 
-        return plot_word_freq(
-            terms_store["entries"], es_client=app.es_client, template=template
+        fig_timeseries = plot_word_freq(
+            terms_store["entries"],
+            es_client=app.es_client,
+            template=template,
         )
+        fig_ranked_bars = plot_relevance_bars(
+            key_colid_tuples=terms_store["entries"],
+            es_client=app.es_client,
+            template=template,
+        )
+
+        return fig_timeseries, fig_ranked_bars
 
     @app.callback(
         Output("search-hit-column", "figure"),

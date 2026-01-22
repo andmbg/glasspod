@@ -14,20 +14,21 @@ from podology.search.utils import normalize_column
 from config import DB_PATH
 
 
-def get_term_frequencies(terms: list, es_client: Elasticsearch) -> pd.DataFrame:
+def get_term_frequencies(terms: list, es_client: Elasticsearch) -> pd.DataFrame | None:
     """
     For each episode and term, compute normalized frequency (per 1000 words) from
     Elasticsearch index search.
 
     Args:
-        terms (list): list of search terms
+        terms (list[str]): list of search terms
         es_client: Elasticsearch client connected to podology's
             Elasticsearch index
 
     Returns:
         df: DataFrame with columns [eid, term, count, total_words, freq_per_1k]
     """
-    assert len(terms) > 0
+    if len(terms) == 0:
+        return None
 
     # Get total word counts for all episodes from database
     # (we need all episodes to show zero counts where no hits are found)
@@ -63,11 +64,9 @@ def get_term_frequencies(terms: list, es_client: Elasticsearch) -> pd.DataFrame:
 
         # Add all episodes for this term, with 0 for those without hits
         for eid in all_eids:
-            term_counts.append({
-                "eid": eid,
-                "term": term,
-                "count": episode_counts.get(eid, 0)
-            })
+            term_counts.append(
+                {"eid": eid, "term": term, "count": episode_counts.get(eid, 0)}
+            )
 
     # Convert to DataFrame
     df = pd.DataFrame(term_counts)
@@ -98,7 +97,7 @@ def get_term_frequencies(terms: list, es_client: Elasticsearch) -> pd.DataFrame:
     return df
 
 
-def get_concept_relevances(concepts, es_client):
+def get_concept_relevances(concepts, es_client) -> pd.DataFrame | None:
     """
     For each episode, compute mean relevance of each concept from Elasticsearch
     chunk embeddings index search.
@@ -111,7 +110,8 @@ def get_concept_relevances(concepts, es_client):
     Returns:
         df: DataFrame with columns [eid, concept, avg_relevance]
     """
-    assert len(concepts) > 0
+    if len(concepts) == 0:
+        return None
 
     from sentence_transformers import SentenceTransformer
     from config import EMBEDDER_ARGS

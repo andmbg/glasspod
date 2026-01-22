@@ -234,3 +234,8 @@ class EpisodeStore:
         with self._connect() as conn:
             cur = conn.execute("SELECT * FROM episodes")
             return iter([self._row_to_episode(row) for row in cur.fetchall()])
+
+    def __len__(self) -> int:
+        with self._connect() as conn:
+            cur = conn.execute("SELECT COUNT(*) FROM episodes")
+            return cur.fetchone()[0]
