@@ -58,28 +58,65 @@ body {
 
 
 .speaker-00 {
-    background-color: rgba(255, 163, 163, 0.2);
+    background-color: #4c72b030;
     border-radius: 12px;
     padding: 8px;
 }
 
 .speaker-01 {
-    background-color: rgba(122, 208, 255, 0.2);
+    background-color: #3aba5730;
     border-radius: 12px;
     padding: 8px;
 }
 
 .speaker-02 {
-    background-color: rgba(255, 229, 116, 0.2);
+    background-color: #c53a5b30;
     border-radius: 12px;
     padding: 8px;
 }
 
 .speaker-03 {
-    background-color: rgba(139, 104, 255, 0.2);
+    background-color: #8172b330;
     border-radius: 12px;
     padding: 8px;
 }
+
+.speaker-04 {
+    background-color: #bfa54530;
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.speaker-05 {
+    background-color: #64b5cd30;
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.speaker-06 {
+    background-color: #6c4c2030;
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.speaker-07 {
+    background-color: #e37c4d30;
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.speaker-08 {
+    background-color: #55555530;
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.speaker-09 {
+    background-color: #60680530;
+    border-radius: 12px;
+    padding: 8px;
+}
+
 
 /*
 Search term_colorid tags

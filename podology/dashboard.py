@@ -900,11 +900,16 @@ def init_callbacks(app):
         Output("tab-container", "value"),
         Input("transcribe-episode-list", "cellClicked"),
         Input("word-count-plot", "clickData"),
+        Input("ranked-bar-plot", "clickData"),
         Input({"type": "result-card", "index": ALL}, "n_clicks"),
         State({"type": "result-card", "index": ALL}, "id"),
     )
     def tab_to_transcript(
-        cellClicked, word_count_click_data, episode_list_nclicks, episode_list_id
+        cellClicked,
+        word_count_click_data,
+        ranked_bar_plot,
+        episode_list_nclicks,
+        episode_list_id,
     ):
         """
         If user clicks on the title of a transcribed episode in the Metadata
@@ -916,7 +921,7 @@ def init_callbacks(app):
 
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        if ctx.triggered_id == "word-count-plot":
+        if ctx.triggered_id in ["word-count-plot", "ranked-bar-plot"]:
             return "within"
 
         if ctx.triggered_id == "transcribe-episode-list":
@@ -1059,16 +1064,14 @@ def init_callbacks(app):
     @app.callback(
         Output("selected-episode", "data"),
         Input("transcribe-episode-list", "cellClicked"),
-        Input({"type": "result-card", "index": ALL}, "n_clicks"),
         Input("word-count-plot", "clickData"),
-        State({"type": "result-card", "index": ALL}, "id"),
+        Input("ranked-bar-plot", "clickData"),
         State("selected-episode", "data"),
     )
     def update_selected_episode(
         table_clicked_cell,
-        resultcard_nclicks,
         word_count_click_data,
-        resultcard_id,
+        ranked_bars_click_data,
         current_eid,
     ):
         """Update which episode is active in the Within tab.
@@ -1093,30 +1096,26 @@ def init_callbacks(app):
                 if episode.transcript.status:
                     return eid
 
-        # Click on result card:
-        elif (
-            "result-card" in trigger_id
-            and resultcard_nclicks
-            and any(i is not None for i in resultcard_nclicks)
-        ):
-            selected_eid = json.loads(trigger_id)["index"]
-
-            return selected_eid
-
         elif word_count_click_data:
             # Extract the episode ID from the clicked point's customdata:
             points = word_count_click_data.get("points", [])
-            logger.debug(points)
             if not points:
                 return no_update
 
             point = points[0]
             eid = point.get("customdata", None)[0]
-            logger.debug(f"word count click data points: {eid}")
-            if eid:
-                return eid
+            return eid
 
-            return no_update
+        elif ranked_bars_click_data:
+            # Extract eid from barplot click data:
+            points = ranked_bars_click_data.get("points")
+            if not points:
+                return no_update
+
+            point = points[0]
+            logger.debug(point)
+            eid = point["customdata"][0]
+            return eid
 
         return no_update
 
@@ -1323,9 +1322,6 @@ def init_callbacks(app):
         """
         if not terms_store or terms_store["entries"] == [] or not eid:
             return empty_term_hit_fig
-
-        episode = episode_store[eid]
-        logger.info(terms_store["entries"])
 
         return plot_transcript_hits_es(
             terms_store["entries"], eid, es_client=app.es_client

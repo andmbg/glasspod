@@ -596,10 +596,10 @@ def plot_relevance_bars(
                     y=tgrp.title_display,
                     marker_color=colordict[colorid],
                     name=key,
-                    customdata=tgrp[["count", "freq1k"]],
+                    customdata=tgrp[["eid", "count", "freq1k"]],
                     hovertemplate=(
                         "<b>%{fullData.name}</b><br><i>(literal search)</i><br><br>"
-                        "%{customdata[0]} occurrences (%{customdata[1]:.2f} per 1,000)<br>"
+                        "%{customdata[1]} occurrences (%{customdata[2]:.2f} per 1,000)<br>"
                         "Relevance: %{x:.2f}"
                         "<extra></extra>"
                     ),
@@ -616,6 +616,7 @@ def plot_relevance_bars(
                     y=cgrp.title_display,
                     marker_color=colordict[colorid],
                     name=key,
+                    customdata=cgrp[["eid"]],
                     hovertemplate=(
                         "<b>%{fullData.name}</b><br><i>(semantic search)</i><br><br>"
                         "Relevance: %{x:.2f}"
