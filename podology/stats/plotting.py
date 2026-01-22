@@ -66,13 +66,13 @@ def plot_word_freq(
                     ),
                     name=term,
                     showlegend=True,
-                    customdata=grp[["title", "term", "count", "total_words"]],
+                    customdata=grp[["eid", "title", "term", "count", "total_words"]],
                     hovertemplate=(
-                        "<b>%{customdata[1]}</b><br>"
+                        "<b>%{customdata[2]}</b><br>"
                         "%{y:.2f} words/1000<br>"
-                        "%{customdata[2]} occurrences<br>"
-                        "%{customdata[3]} total<br><br>"
-                        "<i>%{customdata[0]}</i><extra>Term</extra>"
+                        "%{customdata[3]} occurrences<br>"
+                        "%{customdata[4]} total<br><br>"
+                        "<i>%{customdata[1]}</i><extra>Term</extra>"
                     ),
                 )
             )
@@ -99,11 +99,11 @@ def plot_word_freq(
                     ),
                     name=concept,
                     showlegend=True,
-                    customdata=grp[["title", "concept"]],
+                    customdata=grp[["eid", "title", "concept"]],
                     hovertemplate=(
-                        "<b>%{customdata[1]}</b><br>"
+                        "<b>%{customdata[2]}</b><br>"
                         "%{y:.3f} standardized relevance<br><br>"
-                        "<i>%{customdata[0]}</i><extra>Concept</extra>"
+                        "<i>%{customdata[1]}</i><extra>Concept</extra>"
                     ),
                 )
             )

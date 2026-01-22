@@ -211,6 +211,7 @@ def init_dashboard(flask_app, route):
             [
                 dcc.Store(id="frequency-dict", data={"": 0}),
                 dcc.Store(id="scroll-position-store", data=0),
+                dcc.Store(id="selected-episode", data=None),
                 # Add a hidden div to trigger the scroll listener setup:
                 html.Div(id="scroll-listener-trigger", style={"display": "none"}),
                 # Help modals:
@@ -1078,7 +1079,8 @@ def init_callbacks(app):
             return no_update
 
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        all_triggers = [i["prop_id"] for i in ctx.triggered]
+        logger.debug(trigger_id)
+        logger.debug(f"word_count_click_data: {word_count_click_data}")
 
         # Click on episode list in meta tab:
         if trigger_id == "transcribe-episode-list":
@@ -1104,11 +1106,12 @@ def init_callbacks(app):
         elif word_count_click_data:
             # Extract the episode ID from the clicked point's customdata:
             points = word_count_click_data.get("points", [])
+            logger.debug(points)
             if not points:
                 return no_update
 
             point = points[0]
-            eid = point.get("customdata", None)[4]
+            eid = point.get("customdata", None)[0]
             logger.debug(f"word count click data points: {eid}")
             if eid:
                 return eid
