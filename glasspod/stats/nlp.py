@@ -26,10 +26,10 @@ from wordcloud import WordCloud
 import numpy as np
 import pandas as pd
 
-from podology.data.Episode import Episode
-from podology.data.Transcript import Transcript
+from glasspod.data.Episode import Episode
+from glasspod.data.Transcript import Transcript
 
-# from podology.frontend.scrollvid.wordticker import ticker_from_eid
+# from glasspod.frontend.scrollvid.wordticker import ticker_from_eid
 from config import STOPWORDS
 
 stop_words = set(stopwords.words("english"))

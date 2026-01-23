@@ -12,12 +12,12 @@ from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 from loguru import logger
 
-from podology.search.elasticsearch import TRANSCRIPT_INDEX_NAME, CHUNK_INDEX_NAME
-from podology.data.EpisodeStore import EpisodeStore
-from podology.data.Episode import Episode
-from podology.data.Transcript import Transcript
-from podology.frontend.utils import colorway, empty_term_hit_fig
-from podology.stats.counting import get_term_frequencies, get_concept_relevances
+from glasspod.search.elasticsearch import TRANSCRIPT_INDEX_NAME, CHUNK_INDEX_NAME
+from glasspod.data.EpisodeStore import EpisodeStore
+from glasspod.data.Episode import Episode
+from glasspod.data.Transcript import Transcript
+from glasspod.frontend.utils import colorway, empty_term_hit_fig
+from glasspod.stats.counting import get_term_frequencies, get_concept_relevances
 from config import HITS_PLOT_BINS, EMBEDDER_ARGS
 
 

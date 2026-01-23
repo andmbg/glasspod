@@ -2,7 +2,7 @@
 data/
 
 # Exclude generated assets
-podology/assets/wordclouds/
+glasspod/assets/wordclouds/
 
 # Exclude Python cache files
 __pycache__/

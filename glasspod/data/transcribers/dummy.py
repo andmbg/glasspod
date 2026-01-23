@@ -7,7 +7,7 @@ import random
 
 import lorem
 
-from podology.data.transcribers.base import Transcriber
+from glasspod.data.transcribers.base import Transcriber
 
 @dataclass
 class DummyTranscriber(Transcriber):

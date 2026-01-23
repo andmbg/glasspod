@@ -16,7 +16,7 @@ __pycache__/
 *.blend1
 *.ipynb
 design/dashboard_layout.drawio.svg
-podology/assets/wordclouds/*
-podology/assets/scrollvids/*
+glasspod/assets/wordclouds/*
+glasspod/assets/scrollvids/*
 **/*/*.db
 **/*/*.rss

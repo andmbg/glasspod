@@ -14,7 +14,7 @@ from loguru import logger
 import requests
 import pandas as pd
 
-from podology.data.transcribers.base import Transcriber
+from glasspod.data.transcribers.base import Transcriber
 from config import TRANSCRIPT_DIR
 
 load_dotenv(find_dotenv(), override=True)

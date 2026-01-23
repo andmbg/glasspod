@@ -24,14 +24,14 @@ from config import (
     EMBEDDER_ARGS,
     ASSETS_DIR,
 )
-from podology.data.Episode import Episode, Status
-from podology.data.Transcript import Transcript
-from podology.stats.nlp import (
+from glasspod.data.Episode import Episode, Status
+from glasspod.data.Transcript import Transcript
+from glasspod.stats.nlp import (
     type_proximity,
     get_wordcloud,
     timed_named_entity_tokens,
 )
-from podology.search.elasticsearch import (
+from glasspod.search.elasticsearch import (
     index_segments,
     index_chunks,
     index_episode_embeddings,
@@ -39,7 +39,7 @@ from podology.search.elasticsearch import (
 )
 
 if TYPE_CHECKING:
-    from podology.data.EpisodeStore import EpisodeStore
+    from glasspod.data.EpisodeStore import EpisodeStore
 
 
 def post_process_pipeline(
@@ -157,7 +157,7 @@ def wordcloud_worker(episode: Episode):
     """Get wordcloud from nlp module, store it...
 
     ...both in the data directory of the current podcast and in the assets directory
-    of the podology package. The latter is for use in the web app.
+    of the glasspod package. The latter is for use in the web app.
 
     Args:
         episode (Episode): The episode for which to create the word cloud.
@@ -167,7 +167,7 @@ def wordcloud_worker(episode: Episode):
     fig = get_wordcloud(episode)
     fig.savefig(path, bbox_inches="tight", dpi=300)
 
-    wc_assets_dir = Path.cwd() / "podology" / "assets" / "wordclouds"
+    wc_assets_dir = Path.cwd() / "glasspod" / "assets" / "wordclouds"
     wc_assets_dir.mkdir(parents=True, exist_ok=True)
     dest_path = wc_assets_dir / f"{episode.eid}.png"
     dest_path.write_bytes(path.read_bytes())

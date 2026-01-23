@@ -7,7 +7,7 @@ import requests
 from rq import Queue
 from redis import Redis
 
-from podology.data.Episode import AudioInfo, Episode, Status, TranscriptInfo
+from glasspod.data.Episode import AudioInfo, Episode, Status, TranscriptInfo
 from config import (
     DB_PATH,
     AUDIO_DIR,
@@ -15,7 +15,7 @@ from config import (
     WORDCLOUD_DIR,
     CHUNKS_DIR,
 )
-from podology.data.transcribers.transcription_worker import transcription_worker
+from glasspod.data.transcribers.transcription_worker import transcription_worker
 
 
 redis_conn = Redis(

@@ -17,7 +17,7 @@ def create_step_flowchart(image_folder="assets/images"):
         },
         {
             "image": "fc_audio.png",
-            "text": "Given that the podology transcriber API is running somewhere (e.g. vast.ai is cheap) User selects episodes and they are downloaded and sent to the API for transcription.",
+            "text": "Given that the Glasspod transcriber API is running somewhere (e.g. vast.ai is cheap) User selects episodes and they are downloaded and sent to the API for transcription.",
         },
         {
             "image": "fc_ar_1.png",
@@ -97,7 +97,7 @@ def create_step_flowchart(image_folder="assets/images"):
         },
         {
             "image": "fc_prompt.png",
-            "text": "Switching the search input to Prompt Mode allows semantic search, i.e. search by semantic similarity.",
+            "text": "Prompt Mode allows semantic search, i.e. search by semantic similarity.",
         },
         {
             "image": "fc_ar_b.png",
@@ -148,13 +148,16 @@ def create_step_flowchart(image_folder="assets/images"):
 
 info_text = dcc.Markdown(
     """
-    ## Podology: Podcast Content Analysis and Search Tool
+    ## Glasspod: Podcast Search and Content Analysis
 
-    This application enables users to analyze and search podcast episodes.
-    Run locally, it implements the full backend pipeline from an RSS location to searchable transcripts, analyses and LLM applications.
+    This application enables users to analyze and search the episodes of a podcast all
+    at once. It implements the full backend pipeline from an RSS location down to
+    transcripts searchable both literally and semantically, time series analyses and
+    (potentially in the future) LLM applications.
 
-    This flowchart illustrates the step-by-step process Podology uses so far.
-    Each step represents a key stage in the data processing pipeline, from fetching RSS feeds to displaying visualizations.
+    This flowchart illustrates the step-by-step process Glasspod uses so far.
+    Each step represents a key stage in the data processing pipeline, from fetching an
+    RSS feeds to displaying visualizations.
 
     ## Data Pipeline Sketch
     """,

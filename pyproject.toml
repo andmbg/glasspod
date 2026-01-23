@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "podology"
+name = "glasspod"
 version = "0.1.0"
 description = "A research tool that provides a web interface to search, analyze, and visualize podcast contents."
 authors = ["Andreas Domberg"]

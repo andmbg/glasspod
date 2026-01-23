@@ -1,6 +1,6 @@
 import pytest
-from podology.data.EpisodeStore import EpisodeStore
-from podology.data.Episode import Episode
+from glasspod.data.EpisodeStore import EpisodeStore
+from glasspod.data.Episode import Episode
 
 
 @pytest.fixture

@@ -13,8 +13,8 @@ from loguru import logger
 import pandas as pd
 import numpy as np
 
-from podology.data.Episode import Episode
-from podology.search.utils import format_time
+from glasspod.data.Episode import Episode
+from glasspod.search.utils import format_time
 from config import TRANSCRIPT_DIR, EMBEDDER_ARGS, CHUNKS_DIR
 
 

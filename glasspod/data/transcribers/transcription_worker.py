@@ -2,10 +2,10 @@ import time
 
 from loguru import logger
 
-from podology.data.Episode import Status
-from podology.data.transcribers.base import Transcriber
-from podology.stats.preparation import post_process_pipeline
-from podology.data.transcribers.whisperx import WhisperXTranscriber
+from glasspod.data.Episode import Status
+from glasspod.data.transcribers.base import Transcriber
+from glasspod.stats.preparation import post_process_pipeline
+from glasspod.data.transcribers.whisperx import WhisperXTranscriber
 from config import TRANSCRIBER_ARGS
 
 
@@ -19,7 +19,7 @@ def transcription_worker(eid: str, timeout: int = 28800, interval: int = 5):
     polling for the job's completion, saving the resulting transcript to disk, and
     post-processing the transcript (e.g., generating stats, enqueueing scrollvid worker).
     """
-    from podology.data.EpisodeStore import EpisodeStore
+    from glasspod.data.EpisodeStore import EpisodeStore
     
     episode_store = EpisodeStore()
     episode = episode_store[eid]

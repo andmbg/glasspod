@@ -13,18 +13,18 @@ from dash_iconify import DashIconify
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from podology.data.Episode import Status
-from podology.data.EpisodeStore import EpisodeStore
-from podology.data.Transcript import Transcript
-from podology.search.search_classes import ResultSet, create_cards
-from podology.search.elasticsearch import get_es_client, TRANSCRIPT_INDEX_NAME
-from podology.stats.preparation import post_process_pipeline
-from podology.stats.plotting import (
+from glasspod.data.Episode import Status
+from glasspod.data.EpisodeStore import EpisodeStore
+from glasspod.data.Transcript import Transcript
+from glasspod.search.search_classes import ResultSet, create_cards
+from glasspod.search.elasticsearch import get_es_client, TRANSCRIPT_INDEX_NAME
+from glasspod.stats.preparation import post_process_pipeline
+from glasspod.stats.plotting import (
     plot_transcript_hits_es,
     plot_word_freq,
     plot_relevance_bars,
 )
-from podology.frontend.utils import (
+from glasspod.frontend.utils import (
     clickable_tag,
     colorway,
     get_sort_button,
@@ -34,14 +34,14 @@ from podology.frontend.utils import (
     empty_term_hit_fig,
     format_duration,
 )
-from podology.frontend.wordticker import get_ticker_dict
-from podology.frontend.help_modals import (
+from glasspod.frontend.wordticker import get_ticker_dict
+from glasspod.frontend.help_modals import (
     info_help_modal,
     episodes_help_modal,
     within_help_modal,
     across_help_modal,
 )
-from podology.frontend.info_tab import create_step_flowchart, info_text
+from glasspod.frontend.info_tab import create_step_flowchart, info_text
 from config import get_connector, ASSETS_DIR, READONLY, BASE_PATH, SKIP_INDEXING
 
 
@@ -62,7 +62,7 @@ episode_store.update_from_files()
 
 
 def with_prefix(path: str) -> str:
-    # Builds /podology/<path> (or /<path> when no prefix)
+    # Builds /glasspod/<path> (or /<path> when no prefix)
     return urljoin(BASE_PATH, path.lstrip("/"))
 
 
@@ -106,7 +106,7 @@ def init_dashboard(flask_app, route):
     else:
         logger.info("Skipping post_process_pipeline (SKIP_INDEXING=True)")
 
-    logger.info(f"Route to podology: {route}")
+    logger.info(f"Route to glasspod: {route}")
 
     app = Dash(
         __name__,

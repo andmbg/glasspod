@@ -15,8 +15,8 @@ from elastic_transport import ConnectionError
 import numpy as np
 
 from config import PROJECT_NAME, TRANSCRIPT_DIR, CHUNKS_DIR, EMBEDDER_ARGS, ES_PORT
-from podology.data.Episode import Episode
-from podology.search.utils import make_index_name
+from glasspod.data.Episode import Episode
+from glasspod.search.utils import make_index_name
 
 
 TRANSCRIPT_INDEX_NAME = make_index_name(PROJECT_NAME, suffix="")

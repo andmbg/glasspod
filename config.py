@@ -14,6 +14,10 @@ logger.add(
     level=os.getenv("LOG_LEVEL", "DEBUG"),
 )
 
+# -----------------------------------------------------------------------------
+# These are the main settings you need to review. All else is optional.
+
+# Your project's name; set in .env:
 PROJECT_NAME = os.getenv("PROJECT_NAME", "Creative Commons")
 SOURCE = os.getenv("SOURCE", "https://anchor.fm/s/4d70d828/podcast/rss")
 # If READONLY is True, no new jobs can be started from the dashboard and the
@@ -37,11 +41,11 @@ if not BASE_PATH.endswith("/"):
 
 # Connector:
 # Meant to open the app to more data sources in the future.
-CONNECTOR_CLASS = "podology.data.connectors.rss.RSSConnector"
+CONNECTOR_CLASS = "glasspod.data.connectors.rss.RSSConnector"
 CONNECTOR_ARGS = {"remote_resource": SOURCE}
 
 # Transcriber:
-TRANSCRIBER_CLASS = "podology.data.transcribers.whisperx.WhisperXTranscriber"
+TRANSCRIBER_CLASS = "glasspod.data.transcribers.whisperx.WhisperXTranscriber"
 TRANSCRIBER_ARGS = {
     "whisperx_url": os.getenv("TRANSCRIBER_URL_PORT"),
     "api_token": os.getenv("API_TOKEN"),
@@ -55,22 +59,27 @@ TRANSCRIBER_ARGS = {
 #
 # Settings about sentence embeddings and vector search
 #
+
 # A word on chunk size:
 # Chunks are made by concatenating transcription segments. Segments are added until the
 # next segment would exceed the maximum chunk size. If leaving this segment away would
 # however yield < min_words, it is included nevertheless. So min_words is a hard limit,
 # max_words a soft limit.
 EMBEDDER_ARGS = {
+    # the embedder is within the docker compose environment
     "url": os.getenv("EMBEDDER_URL_PORT", "http://embedder:19001"),
+    # multilingual model with 768 dimensions
     "model": os.getenv("EMBEDDER_MODEL", "multi-qa-mpnet-base-dot-v1"),
     "dims": int(os.getenv("EMBEDDER_DIMS", 768)),
+    # chunk size:
     "min_words": 100,
     "max_words": 150,
     "overlap": 0.2,
 }
 
-# Stopwords concern the identification of named entities in scroll video rendering
-# and stats. They are still transcribed, and still found by Elasticsearch.
+# Stopwords concern the identification of named entities in scroll word cloud rendering
+# and stats. They are still transcribed, and still found by Elasticsearch, just don't
+# appear in word clouds.
 PROJECT_STOPWORDS = [
     i.lower()
     for i in [
@@ -78,7 +87,7 @@ PROJECT_STOPWORDS = [
     ]
 ]
 
-# Set of stopwords that don't vary from pod to pod:
+# Set of stopwords that don't vary from pod to pod (sample):
 STOPWORDS = [
     i.lower()
     for i in [
@@ -115,7 +124,7 @@ AUDIO_DIR = DATA_DIR / PROJECT_NAME / "audio"
 TRANSCRIPT_DIR = DATA_DIR / PROJECT_NAME / "transcripts"
 CHUNKS_DIR = DATA_DIR / PROJECT_NAME / "chunks"
 WORDCLOUD_DIR = DATA_DIR / PROJECT_NAME / "wordclouds"
-ASSETS_DIR = Path("podology") / "assets"
+ASSETS_DIR = Path("glasspod") / "assets"
 
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)

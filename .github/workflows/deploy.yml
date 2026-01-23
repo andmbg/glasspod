@@ -11,7 +11,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-podology:
+  build-glasspod:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,13 +32,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/podology
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/glasspod
           tags: |
             type=ref,event=branch
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Podology image
+      - name: Build and push Glasspod image
         uses: docker/build-push-action@v5
         with:
           push: ${{ github.event_name != 'pull_request' }}

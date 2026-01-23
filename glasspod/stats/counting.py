@@ -5,12 +5,12 @@ import pandas as pd
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 
-from podology.search.elasticsearch import (
+from glasspod.search.elasticsearch import (
     get_es_client,
     TRANSCRIPT_INDEX_NAME,
     EPISODE_INDEX_NAME,
 )
-from podology.search.utils import normalize_column
+from glasspod.search.utils import normalize_column
 from config import DB_PATH
 
 
@@ -21,7 +21,7 @@ def get_term_frequencies(terms: list, es_client: Elasticsearch) -> pd.DataFrame 
 
     Args:
         terms (list[str]): list of search terms
-        es_client: Elasticsearch client connected to podology's
+        es_client: Elasticsearch client connected to glasspod's
             Elasticsearch index
 
     Returns:
@@ -104,7 +104,7 @@ def get_concept_relevances(concepts, es_client) -> pd.DataFrame | None:
 
     Args:
         concepts (list): list of prompts or concepts
-        es_client: Elasticsearch client connected to podology's
+        es_client: Elasticsearch client connected to glasspod's
             Elasticsearch index
 
     Returns:
