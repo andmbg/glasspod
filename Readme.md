@@ -1,4 +1,4 @@
-# ![](glasspod/assets/favicon.ico) Glasspod
+# ![](icon.png) Glasspod
 
 A research tool that provides a web interface to search, analyze, and visualize podcast contents.
 
@@ -89,3 +89,7 @@ docker compose up --build -d && docker compose logs -f
 
 For shorter dev cycles, omit the initial steps where embeddings are created from 
 transcripts and both are indexed. For this, thes steps must have been gone through once.
+
+---
+
+**Image credits**: *"professional-retro-microphone--dj-headphones-"* by www.ilmicrofono.it is licensed under CC BY 2.0.
