@@ -378,6 +378,7 @@ def init_dashboard(flask_app, route):
                                                     DashIconify(
                                                         icon="mdi:help-circle-outline",
                                                         width=24,
+                                                        className="icon-glow",
                                                     ),
                                                     id="help-episodes",
                                                     variant="subtle",
@@ -443,6 +444,7 @@ def init_dashboard(flask_app, route):
                                                     DashIconify(
                                                         icon="mdi:help-circle-outline",
                                                         width=24,
+                                                        className="icon-glow",
                                                     ),
                                                     id="help-within",
                                                     variant="subtle",
@@ -635,6 +637,7 @@ def init_dashboard(flask_app, route):
                                                 DashIconify(
                                                     icon="mdi:help-circle-outline",
                                                     width=24,
+                                                    className="icon-glow",
                                                 ),
                                                 id="help-across",
                                                 variant="subtle",
@@ -696,7 +699,7 @@ def init_dashboard(flask_app, route):
                     color="#4488ff",
                     orientation="horizontal",
                     variant="default",
-                    value="info",
+                    value="metadata",
                     style={"height": "calc(100vh - 250px)"},
                 ),
                 dcc.Interval(id="pageload-trigger", interval=100, max_intervals=1),

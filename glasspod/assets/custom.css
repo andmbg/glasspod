@@ -129,8 +129,30 @@ Search term_colorid tags
     margin: 4px 2px;
     border: 0;
     border-radius: 20px;
-    background-color: rgba(234, 234, 234, 0.6);
+    background-color: rgb(220, 220, 220);
     box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    white-space: nowrap;
+    /* Prevent text from wrapping */
+    overflow: hidden;
+    /* Hide overflow text */
+    text-overflow: ellipsis;
+    /* Add ellipsis to cropped text */
+    flex-shrink: 0;
+    /* Allow the item to shrink if necessary */
+    box-sizing: border-box;
+}
+
+.concept-item {
+    color: #143774;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px 6px 20px;
+    margin: 4px 2px;
+    border: 0;
+    border-radius: 20px;
+    background-color: #cbd7ec;
+    box-shadow: 0 0 30px #4489ff8b;
     position: relative;
     white-space: nowrap;
     /* Prevent text from wrapping */
@@ -165,6 +187,16 @@ Search term_colorid tags
 }
 
 .term-item::before {
+    content: "";
+    width: 20px;
+    height: 40px;
+    border-radius: 16px 0 0 16px;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.concept-item::before {
     content: "";
     width: 20px;
     height: 40px;
@@ -365,7 +397,7 @@ Half-circle highlight effect for text spans
 /* AG Table tooltip */
 .custom-tooltip {
     width: 500px;
-    height: 600px;
+    max-height: 600px;
     overflow-y: auto;
     padding: 10px;
     background-color: #fff;
@@ -503,6 +535,104 @@ Half-circle highlight effect for text spans
 
 [data-search-mode="semantic"] #input {
     box-shadow: 0 0 30px #4489ff8b;
+}
+
+/* SVG icon glow effect using drop-shadow filter */
+svg.icon-glow,
+.icon-glow svg {
+    filter: drop-shadow(0 0 6px #4488ff);
+}
+
+/* Tree-based flowchart styles */
+.tree-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+}
+
+.tree-guides {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.tree-guide {
+    width: 30px;
+    height: 100%;
+}
+
+.tree-guide-line {
+    border-left: 2px solid #888;
+    margin-left: 14px;
+}
+
+/* Branch connectors: ├ and └ */
+.tree-connector {
+    width: 20px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.tree-connector::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: #888;
+}
+
+/* ├ connector - has vertical line continuing down */
+.tree-connector-branch::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #888;
+}
+
+/* └ connector - vertical line only to midpoint */
+.tree-connector-last::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 50%;
+    width: 2px;
+    background-color: #888;
+}
+
+/* Flowchart step (image + vertical connector) */
+.flowchart-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    flex: 1;
+}
+
+.flowchart-connector {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background-color: #888;
+    position: relative;
+}
+
+/* Arrow at bottom of connector */
+.flowchart-connector::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #888;
 }
 
 

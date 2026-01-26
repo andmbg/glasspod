@@ -37,6 +37,7 @@
 
 # Bugs
 
+- process depiction on page 1 sensitive against screen size
 - Search for term "Jones." does not highlight "Jones." in transcript (but in the hits column).
 - Search for "Pamporio" highlights "Pamporio's" inline but doesn't show a hit. It requires searching "Pamporio's".
 - if one search term contains another, highlights in the transcript get messed up.

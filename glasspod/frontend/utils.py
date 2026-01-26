@@ -31,6 +31,7 @@ def clickable_tag(index: int, term_colorid: Tuple[str, int, str]) -> html.Div:
     :param term_colorid: Tuple of (term, color_id, term_type).
     """
     term, colorid, termtype = term_colorid
+    css_type = "term-item" if termtype == "term" else "concept-item"
 
     return html.Div(
         [
@@ -50,7 +51,7 @@ def clickable_tag(index: int, term_colorid: Tuple[str, int, str]) -> html.Div:
                 className="term-remove",
             ),
         ],
-        className=f"term-item term-color-{colorid}",
+        className=f"{css_type} term-color-{colorid}",
         title=term,
     )
 

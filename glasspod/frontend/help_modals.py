@@ -9,11 +9,16 @@ info_help_modal = dmc.Modal(
             """
 ### More on the Backend
 
-This app comes with an additional dockerized API that can be run locally or on a cloud instance
-with GPU access and that does the transcribing and diarization of podcast episodes. Renting for
-instance a RTX 4090 instance on [vast.ai](http://vast.ai) leads to ca. 20-23x transcription
-speed, at a cost of ca. $0.30 per hour (Oct 2025). Transcribing 100 one-hour episodes at this
-rate costs about $1.50, which is much cheaper than commercial services.
+This app connects to a customized transcription API
+([fluesterx](https://github.com/andmbg/fluesterx)) that can be run locally or on a
+cloud instance, typically with GPU access. For instance an RTX 4090 instance leads to
+ca. 15-23x transcription speed depending on the language model used. Cost is ca. $0.30
+per hour (Oct 2025). Transcribing 100 one-hour episodes at this rate costs about $1.50,
+which is well below commercial transcription services.
+
+### github
+
+Find this project at [github](https://github.com/andmbg/glasspod).
             """,
             style={
                 "font-family": (
@@ -89,12 +94,17 @@ across_help_modal = dmc.Modal(
             """
 ### The Across Episodes Tab
 
-On this tab, episodes are compared to each other. This involves
+This tab gives insights to developments in time and about relationships among search
+terms and semantic prompts.
 
-- a time series plot for search terms that shows their relative frequency across episodes,
-- [TODO] a visualization of the semantic search prompts,
-- [TODO] a clustering of episodes based on search terms and semantic similarities.
+The **time series** plot at the top shows the frequency of search terms and relevance of
+semantic prompts and their importance across time.
 
+The **ranked relevance barplot** ranks episode as to the frequency of literal search
+terms or relevance of semantic prompts. Here, the order of terms/prompts matters, and
+this is why the arrow button on the tags at the top reorders them. 
+
+Clicking on a given episode takes you to it in the Within Episode tab.
             """,
             style={
                 "font-family": (
