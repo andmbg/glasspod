@@ -1,0 +1,133 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl-certs:/etc/ssl/certs:ro
+    depends_on:
+      - portfolio
+      - pks
+      - glasspod-app
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  portfolio:
+    image: ghcr.io/andmbg/portfolio:latest
+    container_name: portfolio
+    env_file:
+      - .env
+    environment:
+      - FLASK_DEBUG=0
+      - FLASK_ENV=production
+    expose:
+      - "5000"
+    command: >
+      gunicorn -k gthread --workers 2 --threads 8 --timeout 60 --bind 0.0.0.0:5000 wsgi:flask_app
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  pks:
+    image: ghcr.io/andmbg/pks:latest
+    container_name: pks
+    env_file:
+      - .env
+    expose:
+      - "8080"
+    environment:
+      - DASH_URL_PREFIX=/pks/
+      - DONT_LOAD_DASH_DEV_TOOLS=1
+      - DASH_DEBUG=0
+      - DASH_ENV=production
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+        # command: >  # wait till we installed gunicorn in pks
+    #   gunicorn -k gthread --workers 2 --threads 8 --timeout 60
+    #   --bind 0.0.0.0:8080 app:app.server
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  glasspod-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+    container_name: glasspod-elasticsearch
+    env_file:
+      - .env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    expose:
+      - "9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./certs:/usr/share/elasticsearch/config/certs:ro
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  glasspod-redis:
+    image: redis:7
+    expose:
+      - "6379"
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  glasspod-app:
+    image: ghcr.io/andmbg/glasspod:latest
+    container_name: glasspod
+    env_file:
+      - .env
+    depends_on:
+      glasspod-elasticsearch:
+        condition: service_healthy
+      glasspod-redis:
+        condition: service_started
+    environment:
+      # Non-sensitive configuration
+      - DATA_ROOT=/app/data
+      - ELASTICSEARCH_HOST=glasspod-elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - REDIS_HOST=glasspod-redis
+      - REDIS_PORT=6379
+      - PORT=8080
+      - DASH_URL_PREFIX=/glasspod/
+      - DASH_DEBUG=0
+      - DASH_ENV=production
+    expose:
+      - "8080"
+    volumes:
+      - ./data/glasspod:/app/data
+    networks:
+      - portfolio_net
+    restart: unless-stopped
+
+  glasspod-worker:
+    image: ghcr.io/andmbg/glasspod:latest
+    container_name: glasspod-worker
+    env_file:
+      - .env
+    depends_on:
+      glasspod-elasticsearch:
+        condition: service_healthy
+      glasspod-redis:
+        condition: service_started
+    environment:
+      - DATA_ROOT=/app/data
+      - ELASTICSEARCH_HOST=glasspod-elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - REDIS_HOST=glasspod-redis
+      - REDIS_PORT=6379
+                                                                                                                                                                            127,1         69%
