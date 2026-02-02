@@ -87,8 +87,14 @@ docker compose up --build -d && docker compose logs -f
 
 ### Develop
 
-For shorter dev cycles, omit the initial steps where embeddings are created from 
-transcripts and both are indexed. For this, thes steps must have been gone through once.
+For shorter dev cycles, set
+
+```py
+READONLY = True
+```
+
+to omit the initial steps where embeddings are created from 
+transcripts and both are indexed. Helps view your edits more immediately.
 
 ---
 
