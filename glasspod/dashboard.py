@@ -60,6 +60,13 @@ if not SKIP_INDEXING:
 
 episode_store.update_from_files()
 
+# Set newest transcribed episode as default for new clients:
+transcribed = [e for e in episode_store if e.transcript.status]
+if transcribed:
+    newest_eid = max(transcribed, key=lambda e: e.pub_date).eid
+else:
+    newest_eid = None
+
 
 def with_prefix(path: str) -> str:
     # Builds /glasspod/<path> (or /<path> when no prefix)
@@ -107,6 +114,7 @@ def init_dashboard(flask_app, route):
         logger.info("Skipping post_process_pipeline (SKIP_INDEXING=True)")
 
     logger.info(f"Route to glasspod: {route}")
+    logger.debug(f"default episode: {newest_eid}")
 
     app = Dash(
         __name__,
@@ -211,7 +219,7 @@ def init_dashboard(flask_app, route):
             [
                 dcc.Store(id="frequency-dict", data={"": 0}),
                 dcc.Store(id="scroll-position-store", data=0),
-                dcc.Store(id="selected-episode", data=None),
+                dcc.Store(id="selected-episode", data=newest_eid),
                 # Add a hidden div to trigger the scroll listener setup:
                 html.Div(id="scroll-listener-trigger", style={"display": "none"}),
                 # Help modals:
@@ -699,7 +707,7 @@ def init_dashboard(flask_app, route):
                     color="#4488ff",
                     orientation="horizontal",
                     variant="default",
-                    value="metadata",
+                    value="within",
                     style={"height": "calc(100vh - 250px)"},
                 ),
                 dcc.Interval(id="pageload-trigger", interval=100, max_intervals=1),
@@ -1048,23 +1056,6 @@ def init_callbacks(app):
         return result_card_elements
 
     @app.callback(
-        Output("sort-buttons", "children"),
-        Input("terms-store", "data"),
-    )
-    def update_sort_buttons(terms_store):
-        """
-        Update the sort buttons based on the current terms. So if a search term
-        is added, add a sort button and so on.
-        """
-        entries = terms_store["entries"]
-
-        out = html.Div(
-            [get_sort_button(i) for i in entries],
-        )
-
-        return out
-
-    @app.callback(
         Output("selected-episode", "data"),
         Input("transcribe-episode-list", "cellClicked"),
         Input("word-count-plot", "clickData"),
@@ -1130,13 +1121,14 @@ def init_callbacks(app):
         Output("ticker-dict", "data"),
         Output("audio-player", "src"),
         Output("scroll-position-store", "data"),
+        Input("pageload-trigger", "n_intervals"),
         Input("selected-episode", "data"),
         State("selected-episode", "data"),
         Input("terms-store", "data"),
         State("terms-store", "data"),
-        prevent_initial_call=True,
     )
     def update_transcript(
+        n_intervals,
         selected_eid_input,
         selected_eid_state,
         terms_store_input,
