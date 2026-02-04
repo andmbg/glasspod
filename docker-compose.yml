@@ -67,8 +67,8 @@ services:
       - REDIS_PORT=6379
       - TRANSCRIBER_URL_PORT=${TRANSCRIBER_URL_PORT}
       - API_TOKEN=${API_TOKEN}
-      - EMBEDDER_MODEL=all-mpnet-base-v2
-      - EMBEDDER_DIMS=768
+      - EMBEDDER_MODEL=${EMBEDDER_MODEL}
+      - EMBEDDER_DIMS=${EMBEDDER_DIMS}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

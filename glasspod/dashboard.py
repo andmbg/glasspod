@@ -607,6 +607,7 @@ def init_dashboard(flask_app, route):
                                                                     className="col-search-hits",
                                                                     style={
                                                                         "padding-left": "0",
+                                                                        "min-width": "50px",
                                                                         "height": "calc(100vh - 350px)",
                                                                     },
                                                                 ),
