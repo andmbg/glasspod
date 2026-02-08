@@ -568,17 +568,20 @@ def init_dashboard(flask_app, route):
                                                                     html.Div(
                                                                         [
                                                                             # Term occurrences:
-                                                                            dcc.Graph(
-                                                                                id="search-hit-column",
-                                                                                config={
-                                                                                    "displayModeBar": False,
-                                                                                    "staticPlot": True,
-                                                                                },
-                                                                                figure=empty_term_hit_fig,
-                                                                                style={
-                                                                                    "height": "calc(100vh - 350px)",
-                                                                                    "width": "100%",
-                                                                                },
+                                                                            dcc.Loading(
+                                                                                dcc.Graph(
+                                                                                    id="search-hit-column",
+                                                                                    config={
+                                                                                        "displayModeBar": False,
+                                                                                        "staticPlot": True,
+                                                                                    },
+                                                                                    figure=empty_term_hit_fig,
+                                                                                    style={
+                                                                                        "height": "calc(100vh - 350px)",
+                                                                                        "width": "100%",
+                                                                                    },
+                                                                                ),
+                                                                                overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
                                                                             ),
                                                                             html.Div(
                                                                                 id="visible-area-overlay",
@@ -657,15 +660,18 @@ def init_dashboard(flask_app, route):
                                     dmc.Grid(
                                         [
                                             dmc.GridCol(
-                                                dcc.Graph(
-                                                    id="word-count-plot",
-                                                    figure=empty_timeseries,
-                                                    config={
-                                                        "displayModeBar": False,
-                                                    },
-                                                    style={
-                                                        "height": 500,
-                                                    },
+                                                dcc.Loading(
+                                                    dcc.Graph(
+                                                        id="word-count-plot",
+                                                        figure=empty_timeseries,
+                                                        config={
+                                                            "displayModeBar": False,
+                                                        },
+                                                        style={
+                                                            "height": 500,
+                                                        },
+                                                    ),
+                                                    overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
                                                 ),
                                                 span=12,
                                             )
@@ -677,23 +683,26 @@ def init_dashboard(flask_app, route):
                                     dmc.Grid(
                                         [
                                             dmc.GridCol(
-                                                html.Div(
-                                                    dcc.Graph(
-                                                        id="ranked-bar-plot",
-                                                        figure=empty_ranked_bars,
-                                                        config={
-                                                            "displayModeBar": False,
-                                                        },
+                                                dcc.Loading(
+                                                    html.Div(
+                                                        dcc.Graph(
+                                                            id="ranked-bar-plot",
+                                                            figure=empty_ranked_bars,
+                                                            config={
+                                                                "displayModeBar": False,
+                                                            },
+                                                            style={
+                                                                "height": 40
+                                                                * len(episode_store)
+                                                            },
+                                                        ),
                                                         style={
-                                                            "height": 40
-                                                            * len(episode_store)
+                                                            "height": "700px",
+                                                            "overflowY": "auto",
+                                                            "overflowX": "hidden",
                                                         },
                                                     ),
-                                                    style={
-                                                        "height": "700px",
-                                                        "overflowY": "auto",
-                                                        "overflowX": "hidden",
-                                                    },
+                                                    overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
                                                 ),
                                                 span=12,
                                             )
