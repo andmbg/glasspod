@@ -131,10 +131,10 @@ def get_concept_relevances(concepts, es_client) -> pd.DataFrame | None:
                 "knn": {
                     "field": "episode_vector",
                     "query_vector": concept_vector,
-                    "k": 1000,  # Get all episodes
-                    "num_candidates": 1000,
+                    "k": 10000,
+                    "num_candidates": 10000,
                 },
-                "size": 1000,
+                "size": 10000,
                 "_source": ["eid", "title"],
             },
         )
