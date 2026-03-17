@@ -277,7 +277,12 @@ def index_episode_embeddings(episodes: List[Episode]) -> None:
 
     if not es_client.indices.exists(index=EPISODE_INDEX_NAME):
         logger.info(f"Creating episode embeddings index: {EPISODE_INDEX_NAME}")
-        es_client.indices.create(index=EPISODE_INDEX_NAME, body=EPISODE_INDEX_SETTINGS)
+        try:
+            es_client.indices.create(index=EPISODE_INDEX_NAME, body=EPISODE_INDEX_SETTINGS)
+        except Exception as e:
+            if "resource_already_exists_exception" not in str(e):
+                raise
+            logger.debug(f"Episode index {EPISODE_INDEX_NAME} already exists (race condition)")
 
     actions = []
 
