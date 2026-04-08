@@ -42,6 +42,7 @@ from glasspod.frontend.help_modals import (
     across_help_modal,
 )
 from glasspod.frontend.info_tab import create_step_flowchart, info_text
+from glasspod.stats.rag import retrieve_chunks, generate_answer
 from config import get_connector, ASSETS_DIR, READONLY, BASE_PATH, SKIP_INDEXING
 
 
@@ -218,6 +219,7 @@ def init_dashboard(flask_app, route):
         dmc.Container(
             [
                 dcc.Store(id="frequency-dict", data={"": 0}),
+                dcc.Store(id="rag-question-store", data=None),
                 dcc.Store(id="scroll-position-store", data=0),
                 dcc.Store(id="selected-episode", data=newest_eid),
                 # Add a hidden div to trigger the scroll listener setup:
@@ -707,6 +709,14 @@ def init_dashboard(flask_app, route):
                                                 span=12,
                                             )
                                         ],
+                                    ),
+                                    #
+                                    # RAG Answer Panel
+                                    # --------------------------------
+                                    dcc.Loading(
+                                        html.Div(id="rag-panel"),
+                                        type="dot",
+                                        delay_show=300,
                                     ),
                                 ]
                             ),
@@ -1330,4 +1340,60 @@ def init_callbacks(app):
 
         return plot_transcript_hits_es(
             terms_store["entries"], eid, es_client=app.es_client
+        )
+
+    @app.callback(
+        Output("rag-question-store", "data"),
+        Input("terms-store", "data"),
+        State("rag-question-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_rag_question(terms_store, current_question):
+        """Extract the last semantic query from the terms store.
+        Only updates the store when the question actually changes."""
+        semantic_entries = [e for e in terms_store.get("entries", []) if e[2] == "semantic"]
+        new_question = semantic_entries[-1][0] if semantic_entries else None
+        if new_question == current_question:
+            return no_update
+        return new_question
+
+    @app.callback(
+        Output("rag-panel", "children"),
+        Input("rag-question-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_rag_panel(question):
+        """Retrieve transcript chunks and generate a Claude answer.
+        Only fires when the semantic question changes."""
+        if not question:
+            return []
+
+        try:
+            chunks = retrieve_chunks(question)
+            if not chunks:
+                answer_content = dcc.Markdown(
+                    "_No relevant transcript passages found for this query._"
+                )
+            else:
+                answer_text = generate_answer(question, chunks)
+                answer_content = dcc.Markdown(answer_text)
+        except Exception as e:
+            logger.error(f"RAG error: {e}")
+            answer_content = dcc.Markdown(f"_Error generating answer: {e}_")
+
+        return dmc.Paper(
+            [
+                dmc.Text("Answer", fw=700, size="sm", mb="xs"),
+                dmc.Text(
+                    f'"{question}"',
+                    size="sm",
+                    c="dimmed",
+                    mb="sm",
+                    fs="italic",
+                ),
+                answer_content,
+            ],
+            p="md",
+            withBorder=True,
+            mt="md",
         )

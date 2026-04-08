@@ -32,6 +32,7 @@ def clickable_tag(index: int, term_colorid: Tuple[str, int, str]) -> html.Div:
     """
     term, colorid, termtype = term_colorid
     css_type = "term-item" if termtype == "term" else "concept-item"
+    display_term = term if termtype == "term" or len(term) <= 30 else term[:28] + "…"
 
     return html.Div(
         [
@@ -43,7 +44,7 @@ def clickable_tag(index: int, term_colorid: Tuple[str, int, str]) -> html.Div:
                 style={"visibility": "hidden" if index == 0 else "visible"},
             ),
             # Term text
-            html.Span(term, className="term-text"),
+            html.Span(display_term, className="term-text"),
             # Remove button
             html.Button(
                 "✕",

@@ -66,7 +66,7 @@ CMD [ \
     "--bind", "0.0.0.0:8080", \
     "-k", "gthread", \
     "--workers", "1", \
-    "--threads", "4", \
+    "--threads", "8", \
     "--timeout", "600", \
     "--preload" \
 ]
