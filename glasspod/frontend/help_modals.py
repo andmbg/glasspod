@@ -8,6 +8,39 @@ MODAL_FONT_STYLE = {
     )
 }
 
+general_modal = dmc.Modal(
+    title="This app",
+    id="general-modal",
+    size="lg",
+    children=[
+        dcc.Markdown(
+            """
+### Get and deploy this app
+
+Knowledge Fight is a >1,000 episode analysis on Alex Jones as a truly damaging entity in
+American culture, an on-ramp to hard right white (audible 'h') nationalism for a less
+than secure audience that often just starts out with tendencies towards conspiracy
+theorizing or religious fundamentalism. During the ride, he extracts money from these
+on average probably mostly elderly people by blatant fear mongering. Granted, this is a
+rather special topic.
+
+But the instance you are looking at merely serves the purpose of showing glasspod in
+action on a larger specimen of the podcast medium. You can pull the code along with the
+transcriber API from github, add your API keys for transcription and the RAG's LLM
+endpoint, pick your podcast of interest, and fire up your own instance and start
+analyzing. Happily with brighter topics.
+
+### Contribute
+
+This app can do more. You're welcome to contribute via pull requests, queries,
+bug reports, etc. [github](https://github.com/andmbg/glasspod).
+            """,
+            style=MODAL_FONT_STYLE,
+        )
+    ],
+)
+
+
 info_help_modal = dmc.Modal(
     title="Under the Hood",
     id="info-help-modal",
@@ -29,9 +62,16 @@ locally or on a cloud GPU instance. An RTX 4090, for example, transcribes at rou
 $1.50 -- well below commercial transcription services.
 
 **Search** comes in two flavors. Literal search uses Elasticsearch's full-text engine
-to find exact term matches across all transcripts. Semantic search encodes your prompt
+to find exact term matches across all transcripts. Query search encodes your prompt
 with a sentence transformer model and compares it against precomputed episode-level
-embeddings via kNN, surfacing episodes by topical relevance rather than exact wording.
+embeddings via kNN, evaluating episodes by topical relevance rather than exact wording.
+
+**RAG** An LLM (using the Anthropic API and their Haiku model, keeping answers terse)
+formulates responses to
+queries. For instance, try questions like "Does Alex like Owen Schroyer?" or "How does
+Alex reconcile both aliens and Christianity?" The input to the LLM is supplied by the
+same semantic search, so the RAG output is given next to the ranking of most relevant
+episodes.
 
 **Indexing and embeddings** are computed once per episode. Transcripts are split into
 overlapping chunks of 100--150 words, each embedded independently. Episode-level vectors
@@ -130,9 +170,11 @@ search terms and semantic prompts you've entered at the top of the page.
 
 **Time series** (top): Each search term or prompt is plotted as a line over time,
 one data point per episode. For literal terms, the y-axis shows normalized frequency
-(occurrences per 1,000 words). For semantic prompts, it shows the similarity score
-between your prompt and each episode's embedding. This makes it easy to spot trends,
-recurring topics, or sudden spikes in attention.
+(occurrences per 1,000 words). Try searches for "Musk", "Trump", or use this to find
+that one spot where you recall a specific term or formulation being used.
+
+For semantic prompts, it shows the similarity score between your prompt and each
+episode's overall embedding.
 
 ![](assets/images/scrshot_timeseries.png)
 

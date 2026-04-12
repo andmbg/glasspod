@@ -36,6 +36,7 @@ from glasspod.frontend.utils import (
 )
 from glasspod.frontend.wordticker import get_ticker_dict
 from glasspod.frontend.help_modals import (
+    general_modal,
     info_help_modal,
     episodes_help_modal,
     within_help_modal,
@@ -225,6 +226,7 @@ def init_dashboard(flask_app, route):
                 # Add a hidden div to trigger the scroll listener setup:
                 html.Div(id="scroll-listener-trigger", style={"display": "none"}),
                 # Help modals:
+                general_modal,
                 info_help_modal,
                 episodes_help_modal,
                 within_help_modal,
@@ -258,6 +260,14 @@ def init_dashboard(flask_app, route):
                                     id="search-mode-switch",
                                     size="lg",
                                     persistence=True,
+                                ),
+                                dmc.ActionIcon(
+                                    DashIconify(
+                                        icon="mdi:help-circle-outline", width=24
+                                    ),
+                                    id="help-general",
+                                    variant="subtle",
+                                    size="lg",
                                 ),
                             ],
                             style={
@@ -583,7 +593,11 @@ def init_dashboard(flask_app, route):
                                                                                         "width": "100%",
                                                                                     },
                                                                                 ),
-                                                                                overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
+                                                                                overlay_style={
+                                                                                    "visibility": "visible",
+                                                                                    "filter": "blur(3px)",
+                                                                                    "opacity": 0.5,
+                                                                                },
                                                                             ),
                                                                             html.Div(
                                                                                 id="visible-area-overlay",
@@ -673,7 +687,11 @@ def init_dashboard(flask_app, route):
                                                             "height": 500,
                                                         },
                                                     ),
-                                                    overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
+                                                    overlay_style={
+                                                        "visibility": "visible",
+                                                        "filter": "blur(3px)",
+                                                        "opacity": 0.5,
+                                                    },
                                                 ),
                                                 span=12,
                                             )
@@ -704,7 +722,11 @@ def init_dashboard(flask_app, route):
                                                             "overflowX": "hidden",
                                                         },
                                                     ),
-                                                    overlay_style={"visibility": "visible", "filter": "blur(3px)", "opacity": 0.5},
+                                                    overlay_style={
+                                                        "visibility": "visible",
+                                                        "filter": "blur(3px)",
+                                                        "opacity": 0.5,
+                                                    },
                                                 ),
                                                 span=12,
                                             )
@@ -829,14 +851,17 @@ def init_callbacks(app):
     )
 
     @app.callback(
+        Output("general-modal", "opened"),
         Output("info-help-modal", "opened"),
         Output("episodes-help-modal", "opened"),
         Output("within-help-modal", "opened"),
         Output("across-help-modal", "opened"),
+        Input("help-general", "n_clicks"),
         Input("help-infos", "n_clicks"),
         Input("help-episodes", "n_clicks"),
         Input("help-within", "n_clicks"),
         Input("help-across", "n_clicks"),
+        State("general-modal", "opened"),
         State("info-help-modal", "opened"),
         State("episodes-help-modal", "opened"),
         State("within-help-modal", "opened"),
@@ -844,10 +869,12 @@ def init_callbacks(app):
         prevent_initial_call=True,
     )
     def toggle_help_modal(
+        n_general,
         n_infos,
         n_episodes,
         n_within,
         n_across,
+        general_open,
         infos_open,
         episodes_open,
         within_open,
@@ -858,16 +885,18 @@ def init_callbacks(app):
         """
         trigger_id = ctx.triggered_id
 
-        if trigger_id == "help-infos":
-            return not infos_open, False, False, False
+        if trigger_id == "help-general":
+            return not general_open, False, False, False, False
+        elif trigger_id == "help-infos":
+            return False, not infos_open, False, False, False
         elif trigger_id == "help-episodes":
-            return False, not episodes_open, False, False
+            return False, False, not episodes_open, False, False
         elif trigger_id == "help-within":
-            return False, False, not within_open, False
+            return False, False, False, not within_open, False
         elif trigger_id == "help-across":
-            return False, False, False, not across_open
+            return False, False, False, False, not across_open
 
-        return False, False, False, False
+        return False, False, False, False, False
 
     @app.callback(
         Output("transcribe-episode-list", "rowData"),
@@ -1351,7 +1380,9 @@ def init_callbacks(app):
     def update_rag_answers(terms_store, answers_cache):
         """Generate and cache answers for any semantic queries not yet answered.
         Only calls ES + Anthropic for questions that aren't in the cache yet."""
-        semantic_entries = [e for e in terms_store.get("entries", []) if e[2] == "semantic"]
+        semantic_entries = [
+            e for e in terms_store.get("entries", []) if e[2] == "semantic"
+        ]
         if not semantic_entries:
             return no_update
 
@@ -1384,7 +1415,9 @@ def init_callbacks(app):
     def update_rag_panel(answers_cache, terms_store):
         """Build the tabbed RAG answer panel. Each semantic tag gets its own
         color-coded tab. Tabs show 'Generating…' until the answer is cached."""
-        semantic_entries = [e for e in terms_store.get("entries", []) if e[2] == "semantic"]
+        semantic_entries = [
+            e for e in terms_store.get("entries", []) if e[2] == "semantic"
+        ]
         if not semantic_entries:
             return []
 
@@ -1409,8 +1442,11 @@ def init_callbacks(app):
             )
             tab_panels.append(
                 dmc.TabsPanel(
-                    dcc.Markdown(answer_text) if answer_text
-                    else dmc.Text("Generating…", c="dimmed", fs="italic", size="sm"),
+                    (
+                        dcc.Markdown(answer_text)
+                        if answer_text
+                        else dmc.Text("Generating…", c="dimmed", fs="italic", size="sm")
+                    ),
                     value=question,
                     pt="sm",
                 )
