@@ -357,14 +357,20 @@ def _search_term_positions(
         for hit in response["hits"]["hits"]:
             if "highlight" in hit:
                 hit_elastic_id = hit["_id"]
+                seg_start = hit["_source"].get("start")
                 hit_transcript_seg = transcript.loc[
                     transcript.elastic_id == hit_elastic_id
                 ]
-                hit_transcript_seg_len = hit_transcript_seg.shape[0]
+
+                if hit_transcript_seg.shape[0] == 0 or seg_start is None:
+                    # Fall back to segment-level start time
+                    if seg_start is not None:
+                        positions.append(float(seg_start))
+                    continue
 
                 hl_text_words = hit["highlight"]["text"][0].split()
                 hit_indices = [
-                    min(i, hit_transcript_seg_len - 1)
+                    min(i, hit_transcript_seg.shape[0] - 1)
                     for i, word in enumerate(hl_text_words)
                     if "START" in word
                 ]
@@ -446,12 +452,8 @@ def _get_transcript_with_elastic_ids(eid: str) -> pd.DataFrame:
     )
 
     # More efficient string concatenation
-    transcript["elastic_id"] = (
-        eid
-        + "_"
-        + transcript["seg_start"].astype(str)
-        + "_"
-        + transcript["seg_end"].astype(str)
+    transcript["elastic_id"] = transcript.apply(
+        lambda row: f"{eid}_{row['seg_start']}_{row['seg_end']}", axis=1
     )
 
     # Create lookup dict for faster access
