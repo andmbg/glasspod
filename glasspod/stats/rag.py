@@ -26,28 +26,51 @@ def retrieve_chunks(question: str, es_client=None, top_k: int = 8) -> list[dict]
     if es_client is None:
         es_client = get_es_client()
 
-    response = es_client.search(
+    knn_response = es_client.search(
         index=CHUNK_INDEX_NAME,
         body={
             "knn": {
                 "field": "embedding",
                 "query_vector": query_vector,
-                "k": top_k,
-                "num_candidates": top_k * 15,
+                "k": top_k * 3,
+                "num_candidates": top_k * 50,
             },
-            "size": top_k,
+            "size": top_k * 3,
             "_source": ["text", "title", "pub_date", "start"],
         },
     )
 
+    bm25_response = es_client.search(
+        index=CHUNK_INDEX_NAME,
+        body={
+            "query": {"match": {"text": question}},
+            "size": top_k * 3,
+            "_source": ["text", "title", "pub_date", "start"],
+        },
+    )
+
+    # Manual RRF: score = sum of 1/(rank + 60) across both result lists
+    rrf_scores: dict[str, float] = {}
+    sources: dict[str, dict] = {}
+
+    for rank, hit in enumerate(knn_response["hits"]["hits"]):
+        doc_id = hit["_id"]
+        rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (rank + 60)
+        sources[doc_id] = hit["_source"]
+
+    for rank, hit in enumerate(bm25_response["hits"]["hits"]):
+        doc_id = hit["_id"]
+        rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (rank + 60)
+        sources[doc_id] = hit["_source"]
+
+    top_ids = sorted(rrf_scores, key=rrf_scores.__getitem__, reverse=True)[:top_k]
+
     chunks = []
-    for hit in response["hits"]["hits"]:
-        src = hit["_source"]
+    for doc_id in top_ids:
+        src = sources[doc_id]
         try:
             start_sec = float(src.get("start", 0) or 0)
-            minutes = int(start_sec // 60)
-            seconds = int(start_sec % 60)
-            timestamp = f"{minutes}:{seconds:02d}"
+            timestamp = f"{int(start_sec // 60)}:{int(start_sec % 60):02d}"
         except (ValueError, TypeError):
             timestamp = "?"
         chunks.append(
@@ -56,7 +79,7 @@ def retrieve_chunks(question: str, es_client=None, top_k: int = 8) -> list[dict]
                 "title": src.get("title", ""),
                 "pub_date": (src.get("pub_date", "") or "")[:10],
                 "timestamp": timestamp,
-                "score": hit["_score"],
+                "score": rrf_scores[doc_id],
             }
         )
     return chunks
@@ -89,6 +112,11 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
     )
 
     client = anthropic.Anthropic(api_key=api_key)
+    for i, chunk in enumerate(chunks):
+        logger.debug(
+            f"RAG chunk {i+1}/{len(chunks)} | score={chunk['score']:.3f} | "
+            f"{chunk['title']!r} @{chunk['timestamp']}\n{chunk['text']}"
+        )
     logger.debug(f"Sending prompt of length {len(prompt)} to Anthropic")
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
