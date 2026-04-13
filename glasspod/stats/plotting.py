@@ -329,10 +329,24 @@ def _search_term_positions(
     """
     Search for term positions using Elasticsearch highlight with positions.
     """
+    term_words = term.strip().split()
+    if len(term_words) == 1:
+        text_query = {
+            "bool": {
+                "should": [
+                    {"match_phrase": {"text": term}},
+                    {"wildcard": {"text": {"value": f"{term.lower()}*"}}},
+                ],
+                "minimum_should_match": 1,
+            }
+        }
+    else:
+        text_query = {"match_phrase": {"text": term}}
+
     query = {
         "query": {
             "bool": {
-                "must": [{"match": {"eid": eid}}, {"match_phrase": {"text": term}}]
+                "must": [{"match": {"eid": eid}}, text_query]
             }
         },
         "highlight": {
